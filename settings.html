@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings – SharePay</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="assets/logo/logo.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/member.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+  <style>
+    /* ── Settings-specific styles ── */
+    .settings-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    @media (max-width: 768px) {
+      .settings-layout { grid-template-columns: 1fr; }
+      .settings-tabs   { display: flex; flex-wrap: wrap; gap: .5rem; }
+      .tab-btn         { flex: 1 1 auto; text-align: center; justify-content: center; }
+    }
+
+    /* Side tab list */
+    .settings-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: .3rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 1rem;
+      padding: .75rem;
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 1rem;
+    }
+    .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      padding: .7rem .9rem;
+      border-radius: .65rem;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: background .15s, color .15s;
+    }
+    .tab-btn .icon { font-size: 1.05rem; }
+    .tab-btn:hover      { background: rgba(99,102,241,.12); color: var(--text-primary); }
+    .tab-btn.active     { background: linear-gradient(135deg, rgba(99,102,241,.25), rgba(139,92,246,.2)); color: var(--primary); }
+
+    /* Panel card */
+    .settings-panel { display: none; }
+    .settings-panel.active { display: block; }
+
+    .panel-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 1.25rem;
+      padding: 1.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .panel-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 0 0 1.25rem;
+      padding-bottom: .75rem;
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    /* Form fields */
+    .form-row { margin-bottom: 1.1rem; }
+    .form-row label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: .4rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .form-input, .form-select {
+      width: 100%;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--glass-border);
+      border-radius: .65rem;
+      padding: .65rem .9rem;
+      font-size: .9rem;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      box-sizing: border-box;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,.2);
+    }
+    .form-select option { background: #1a1b2e; color: #fff; }
+    .form-hint { font-size: .75rem; color: var(--text-secondary); margin-top: .3rem; }
+
+    /* Avatar upload */
+    .avatar-row {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .avatar-preview {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; font-weight: 800; color: #fff;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar-actions { display: flex; flex-direction: column; gap: .4rem; }
+    .btn-upload {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff; border: none; border-radius: .6rem;
+      padding: .45rem .9rem; font-size: .82rem; font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-remove {
+      background: transparent; border: 1px solid var(--glass-border);
+      color: var(--text-secondary); border-radius: .6rem;
+      padding: .45rem .9rem; font-size: .82rem; font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Toggle switch */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .85rem 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-info .label  { font-size: .9rem; font-weight: 600; }
+    .toggle-info .sublabel { font-size: .78rem; color: var(--text-secondary); margin-top: .15rem; }
+
+    .toggle {
+      position: relative;
+      width: 44px; height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,.15);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      left: 3px; top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform .2s;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--primary); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    /* Currency / plan selector */
+    .plan-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: .75rem;
+    }
+    .plan-card {
+      border: 1px solid var(--glass-border);
+      border-radius: .85rem;
+      padding: 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    .plan-card:hover { border-color: var(--primary); background: rgba(99,102,241,.08); }
+    .plan-card.selected { border-color: var(--primary); background: rgba(99,102,241,.15); }
+    .plan-card .plan-name  { font-weight: 700; font-size: .95rem; }
+    .plan-card .plan-price { font-size: .82rem; color: var(--text-secondary); margin-top: .2rem; }
+    .plan-badge {
+      display: inline-block;
+      background: var(--primary); color: #fff;
+      font-size: .65rem; font-weight: 700; padding: .1rem .4rem; border-radius: 4px;
+      margin-top: .3rem;
+    }
+
+    /* Danger zone */
+    .danger-zone { border-color: rgba(248,113,113,.35); }
+    .danger-zone h3 { color: #f87171; }
+    .btn-danger {
+      background: transparent;
+      border: 1px solid #f87171;
+      color: #f87171;
+      border-radius: .65rem;
+      padding: .55rem 1.1rem;
+      font-size: .88rem; font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, color .2s;
+    }
+    .btn-danger:hover { background: #f87171; color: #fff; }
+    .danger-actions { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: .5rem; }
+
+    /* Save row */
+    .save-row { display: flex; justify-content: flex-end; gap: .75rem; margin-top: .5rem; }
+    .btn-save {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff; border: none; border-radius: .65rem;
+      padding: .6rem 1.4rem; font-size: .9rem; font-weight: 600;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .btn-save:hover { opacity: .88; }
+    .btn-cancel-sm {
+      background: transparent;
+      border: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+      border-radius: .65rem;
+      padding: .6rem 1.1rem; font-size: .9rem; font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff; padding: .75rem 1.25rem;
+      border-radius: .85rem; font-weight: 600; font-size: .9rem;
+      box-shadow: 0 8px 24px rgba(99,102,241,.4);
+      opacity: 0; transform: translateY(12px);
+      transition: opacity .3s, transform .3s;
+      pointer-events: none; z-index: 9999;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════  SIDEBAR NAV  ════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <a href="index.html">
+      <img src="assets/logo/logo.svg" alt="SharePay" height="36" />
+    </a>
+    <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">✕</button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="index.html"         class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a href="member.html"        class="nav-item"><span class="nav-icon">👥</span> Groups</a>
+    <a href="expense-list.html"  class="nav-item"><span class="nav-icon">💸</span> Expenses</a>
+    <a href="settlement.html"    class="nav-item"><span class="nav-icon">🤝</span> Settlements</a>
+    <a href="settings.html"      class="nav-item active"><span class="nav-icon">⚙️</span> Settings</a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <a href="login.html" class="nav-item" id="logoutBtn"><span class="nav-icon">🚪</span> Logout</a>
+  </div>
+</aside>
+
+<!-- ════════════════════  TOPBAR  ════════════════════ -->
+<div class="topbar">
+  <button class="menu-toggle" id="menuToggle" aria-label="Open menu">☰</button>
+  <div class="topbar-title">Settings</div>
+  <div class="topbar-actions">
+    <button class="btn-icon" title="Notifications">🔔</button>
+  </div>
+</div>
+
+<!-- ════════════════════  MAIN CONTENT  ════════════════════ -->
+<main class="main-content">
+  <div class="settings-layout">
+
+    <!-- ── Left: Tab navigation ── -->
+    <div class="settings-tabs">
+      <button class="tab-btn active" data-panel="profile"       onclick="switchTab(this, 'profile')">
+        <span class="icon">👤</span> Profile
+      </button>
+      <button class="tab-btn" data-panel="notifications"        onclick="switchTab(this, 'notifications')">
+        <span class="icon">🔔</span> Notifications
+      </button>
+      <button class="tab-btn" data-panel="preferences"          onclick="switchTab(this, 'preferences')">
+        <span class="icon">🎨</span> Preferences
+      </button>
+      <button class="tab-btn" data-panel="subscription"         onclick="switchTab(this, 'subscription')">
+        <span class="icon">💎</span> Plan
+      </button>
+      <button class="tab-btn" data-panel="security"             onclick="switchTab(this, 'security')">
+        <span class="icon">🔒</span> Security
+      </button>
+      <button class="tab-btn" data-panel="danger"               onclick="switchTab(this, 'danger')">
+        <span class="icon">⚠️</span> Danger Zone
+      </button>
+    </div>
+
+    <!-- ── Right: Panels ── -->
+    <div>
+
+      <!-- PROFILE -->
+      <div class="settings-panel active" id="panel-profile">
+        <div class="panel-card">
+          <h3>👤 Profile Information</h3>
+          <div class="avatar-row">
+            <div class="avatar-preview" id="avatarPreview">U</div>
+            <div class="avatar-actions">
+              <button class="btn-upload" onclick="document.getElementById('avatarInput').click()">Upload Photo</button>
+              <button class="btn-remove" onclick="removeAvatar()">Remove</button>
+              <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="previewAvatar(event)" />
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Display Name</label>
+            <input type="text" class="form-input" id="displayName" placeholder="Your name" />
+          </div>
+          <div class="form-row">
+            <label>Email Address</label>
+            <input type="email" class="form-input" id="emailField" placeholder="you@example.com" />
+            <p class="form-hint">Changing email requires re-verification.</p>
+          </div>
+          <div class="form-row">
+            <label>Phone Number</label>
+            <input type="tel" class="form-input" id="phoneField" placeholder="+66 81 234 5678" />
+          </div>
+          <div class="form-row">
+            <label>Bio</label>
+            <textarea class="form-input" id="bioField" rows="3" placeholder="A short bio…" style="resize:vertical;"></textarea>
+          </div>
+          <div class="save-row">
+            <button class="btn-cancel-sm" onclick="loadProfileData()">Reset</button>
+            <button class="btn-save" onclick="saveProfile()">Save Changes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS -->
+      <div class="settings-panel" id="panel-notifications">
+        <div class="panel-card">
+          <h3>🔔 Notification Preferences</h3>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="label">Email Notifications</div>
+              <div class="sublabel">Receive expense updates via email</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="emailNotif" checked /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="label">Push Notifications</div>
+              <div class="sublabel">Browser push alerts for new activity</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="pushNotif" checked /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="label">Settlement Reminders</div>
+              <div class="sublabel">Remind me 3 days before due date</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="settlRemind" checked /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="label">New Group Invitations</div>
+              <div class="sublabel">Alert when someone adds me to a group</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="groupInvite" checked /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="label">Weekly Summary</div>
+              <div class="sublabel">Get a weekly digest every Monday</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="weeklySummary" /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="save-row">
+            <button class="btn-save" onclick="saveNotifications()">Save Preferences</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PREFERENCES -->
+      <div class="settings-panel" id="panel-preferences">
+        <div class="panel-card">
+          <h3>🎨 Display & Regional Preferences</h3>
+          <div class="form-row">
+            <label>Currency</label>
+            <select class="form-select" id="currencySelect">
+              <option value="USD">🇺🇸 USD – US Dollar</option>
+              <option value="THB">🇹🇭 THB – Thai Baht</option>
+              <option value="EUR">🇪🇺 EUR – Euro</option>
+              <option value="GBP">🇬🇧 GBP – British Pound</option>
+              <option value="JPY">🇯🇵 JPY – Japanese Yen</option>
+              <option value="SGD">🇸🇬 SGD – Singapore Dollar</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Language</label>
+            <select class="form-select" id="langSelect">
+              <option value="en">English</option>
+              <option value="th">ภาษาไทย (Thai)</option>
+              <option value="ja">日本語 (Japanese)</option>
+              <option value="zh">中文 (Chinese)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Date Format</label>
+            <select class="form-select" id="dateFormat">
+              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Default Split Method</label>
+            <select class="form-select" id="splitDefault">
+              <option value="equal">Equal Split</option>
+              <option value="percentage">Percentage Split</option>
+              <option value="exact">Exact Amounts</option>
+              <option value="shares">Shares</option>
+            </select>
+          </div>
+          <div class="save-row">
+            <button class="btn-save" onclick="savePreferences()">Save Preferences</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBSCRIPTION -->
+      <div class="settings-panel" id="panel-subscription">
+        <div class="panel-card">
+          <h3>💎 Your Plan</h3>
+          <div class="plan-grid">
+            <div class="plan-card selected" id="plan-free" onclick="selectPlan('free')">
+              <div class="plan-name">Free</div>
+              <div class="plan-price">$0 / mo</div>
+              <div class="plan-badge" style="background:#6b7280;">Current</div>
+            </div>
+            <div class="plan-card" id="plan-pro" onclick="selectPlan('pro')">
+              <div class="plan-name">Pro</div>
+              <div class="plan-price">$4.99 / mo</div>
+              <div class="plan-badge">Popular</div>
+            </div>
+            <div class="plan-card" id="plan-team" onclick="selectPlan('team')">
+              <div class="plan-name">Team</div>
+              <div class="plan-price">$9.99 / mo</div>
+            </div>
+          </div>
+          <div style="margin-top:1.5rem; padding:1rem; background:rgba(99,102,241,.1); border-radius:.75rem; font-size:.85rem; color:var(--text-secondary);">
+            ✨ <strong style="color:var(--text-primary);">Pro</strong> includes unlimited groups, receipt scanning, CSV export, and priority support.
+          </div>
+        </div>
+      </div>
+
+      <!-- SECURITY -->
+      <div class="settings-panel" id="panel-security">
+        <div class="panel-card">
+          <h3>🔒 Security</h3>
+          <div class="form-row">
+            <label>Current Password</label>
+            <input type="password" class="form-input" id="currentPass" placeholder="••••••••" />
+          </div>
+          <div class="form-row">
+            <label>New Password</label>
+            <input type="password" class="form-input" id="newPass" placeholder="••••••••" />
+            <p class="form-hint">Minimum 8 characters, include a number.</p>
+          </div>
+          <div class="form-row">
+            <label>Confirm New Password</label>
+            <input type="password" class="form-input" id="confirmPass" placeholder="••••••••" />
+          </div>
+          <div class="save-row">
+            <button class="btn-save" onclick="changePassword()">Update Password</button>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h3>🛡️ Two-Factor Authentication</h3>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="label">Enable 2FA</div>
+              <div class="sublabel">Require OTP on every login</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="twofa" /><span class="toggle-slider"></span></label>
+          </div>
+          <div style="margin-top:1rem;">
+            <button class="btn-save" style="font-size:.85rem; padding:.5rem 1rem;" onclick="showToast('2FA setup coming soon!')">
+              Setup Authenticator App
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DANGER ZONE -->
+      <div class="settings-panel" id="panel-danger">
+        <div class="panel-card danger-zone">
+          <h3>⚠️ Danger Zone</h3>
+          <p style="color:var(--text-secondary); font-size:.9rem; margin:0 0 1rem;">
+            These actions are <strong style="color:#f87171;">irreversible</strong>. Please proceed with caution.
+          </p>
+          <div class="danger-actions">
+            <button class="btn-danger" onclick="confirmAction('Export your data?', exportData)">📦 Export Data</button>
+            <button class="btn-danger" onclick="confirmAction('Clear all notifications?', clearNotifications)">🔕 Clear Notifications</button>
+            <button class="btn-danger" onclick="confirmAction('Delete your account? This cannot be undone.', deleteAccount)">🗑️ Delete Account</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right panels -->
+  </div><!-- /settings-layout -->
+</main>
+
+<div class="toast" id="toast">Saved!</div>
+
+<!-- ════════════════════  SCRIPTS  ════════════════════ -->
+<script type="module" src="../js/app.js"></script>
+<script type="module" src="../js/auth.js"></script>
+<script type="module" src="../js/notifications.js"></script>
+<script>
+  // ── Sidebar ──
+  const sidebar = document.getElementById('sidebar');
+  document.getElementById('menuToggle').addEventListener('click',  () => sidebar.classList.add('open'));
+  document.getElementById('sidebarClose').addEventListener('click',() => sidebar.classList.remove('open'));
+
+  // ── Tab switching ──
+  function switchTab(btn, panel) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + panel).classList.add('active');
+  }
+
+  // ── Toast ──
+  function showToast(msg = 'Saved!') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // ── Avatar ──
+  function previewAvatar(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const el = document.getElementById('avatarPreview');
+      el.innerHTML = `<img src="${ev.target.result}" alt="avatar" />`;
+    };
+    reader.readAsDataURL(file);
+  }
+  function removeAvatar() {
+    const el = document.getElementById('avatarPreview');
+    el.innerHTML = el.getAttribute('data-init') || 'U';
+  }
+
+  // ── Profile ──
+  function loadProfileData() {
+    const cfg = window.SharePayConfig;
+    const user = cfg?.auth?.currentUser;
+    if (user) {
+      document.getElementById('displayName').value = user.displayName || '';
+      document.getElementById('emailField').value  = user.email || '';
+      const preview = document.getElementById('avatarPreview');
+      const initials = (user.displayName || 'U')[0].toUpperCase();
+      preview.setAttribute('data-init', initials);
+      if (!preview.querySelector('img')) preview.textContent = initials;
+    }
+  }
+  async function saveProfile() {
+    const name = document.getElementById('displayName').value.trim();
+    if (!name) { showToast('⚠️ กรุณากรอกชื่อ'); return; }
+    const cfg  = window.SharePayConfig;
+    const user = cfg?.auth?.currentUser;
+    if (!user) { showToast('⚠️ กรุณาเข้าสู่ระบบก่อน'); return; }
+    const { updateProfile } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+    const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+    await updateProfile(user, { displayName: name });
+    await updateDoc(doc(cfg.db, cfg.collections.users, user.uid), { name, updatedAt: new Date().toISOString() });
+    showToast('✅ บันทึกข้อมูลโปรไฟล์สำเร็จ!');
+  }
+
+  // ── Notifications ──
+  function saveNotifications() {
+    const prefs = {
+      email:   document.getElementById('emailNotif').checked,
+      push:    document.getElementById('pushNotif').checked,
+      remind:  document.getElementById('settlRemind').checked,
+      invite:  document.getElementById('groupInvite').checked,
+      weekly:  document.getElementById('weeklySummary').checked,
+    };
+    // db.collection('userSettings').doc(uid).set({ notifications: prefs }, { merge: true });
+    localStorage.setItem('sp_notif_prefs', JSON.stringify(prefs));
+    showToast('✅ Notification preferences saved!');
+  }
+
+  // ── Preferences ──
+  function savePreferences() {
+    const prefs = {
+      currency:   document.getElementById('currencySelect').value,
+      language:   document.getElementById('langSelect').value,
+      dateFormat: document.getElementById('dateFormat').value,
+      splitDefault: document.getElementById('splitDefault').value,
+    };
+    localStorage.setItem('sp_display_prefs', JSON.stringify(prefs));
+    showToast('✅ Preferences saved!');
+  }
+
+  // ── Plan ──
+  function selectPlan(plan) {
+    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('plan-' + plan).classList.add('selected');
+    if (plan !== 'free') showToast('🔗 Redirecting to checkout… (Stripe integration)');
+  }
+
+  // ── Security ──
+  function changePassword() {
+    const np = document.getElementById('newPass').value;
+    const cp = document.getElementById('confirmPass').value;
+    if (np !== cp)       { showToast('⚠️ Passwords do not match'); return; }
+    if (np.length < 8)   { showToast('⚠️ Password too short'); return; }
+    const cfg2 = window.SharePayConfig;
+    if (cfg2?.auth?.currentUser) {
+      import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js").then(({ updatePassword }) => {
+        return updatePassword(cfg2.auth.currentUser, np);
+      }).then(() => showToast('✅ เปลี่ยนรหัสผ่านสำเร็จ!')).catch(err => showToast('⚠️ ' + err.message));
+    } else {
+      showToast('⚠️ กรุณาเข้าสู่ระบบก่อน');
+    }
+    ['currentPass','newPass','confirmPass'].forEach(id => document.getElementById(id).value = '');
+  }
+
+  // ── Danger zone ──
+  function confirmAction(msg, cb) {
+    if (confirm(msg + '\n\nAre you absolutely sure?')) cb();
+  }
+  function exportData()         { showToast('📦 Export started — check your email'); }
+  function clearNotifications() { showToast('🔕 Notifications cleared'); }
+  function deleteAccount() {
+    const cfg3 = window.SharePayConfig;
+    const u = cfg3?.auth?.currentUser;
+    if (u) {
+      import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js").then(({ deleteUser }) => {
+        return deleteUser(u);
+      }).then(() => { window.location.href = '/register.html'; })
+        .catch(err => showToast('⚠️ ' + err.message + ' (อาจต้อง re-authenticate ก่อน)'));
+    }
+  }
+
+  // ── Init ──
+  document.addEventListener('DOMContentLoaded', () => {
+    loadProfileData();
+    // Restore saved prefs
+    const dp = JSON.parse(localStorage.getItem('sp_display_prefs') || '{}');
+    if (dp.currency)   document.getElementById('currencySelect').value  = dp.currency;
+    if (dp.language)   document.getElementById('langSelect').value      = dp.language;
+    if (dp.dateFormat) document.getElementById('dateFormat').value      = dp.dateFormat;
+    if (dp.splitDefault) document.getElementById('splitDefault').value  = dp.splitDefault;
+  });
+</script>
+</body>
+</html>

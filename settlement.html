@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settlements – SharePay</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="assets/logo/logo.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/member.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+  <style>
+    /* ── Settlement-specific styles ── */
+    .settlement-hero {
+      background: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.10) 100%);
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: 1.25rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    .settlement-hero h2 { font-size: 1.6rem; font-weight: 700; margin: 0 0 .4rem; }
+    .settlement-hero p  { color: var(--text-secondary); margin: 0; }
+
+    .balance-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .balance-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .balance-card .label { font-size: .78rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .4rem; }
+    .balance-card .amount { font-size: 1.8rem; font-weight: 800; }
+    .balance-card.owed   .amount { color: #f87171; }
+    .balance-card.owe    .amount { color: #34d399; }
+    .balance-card.net    .amount { color: var(--primary); }
+
+    /* Debt flow cards */
+    .section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0 0 1rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .section-title span.badge {
+      background: var(--primary);
+      color: #fff;
+      font-size: .72rem;
+      padding: .15rem .55rem;
+      border-radius: 99px;
+    }
+
+    .settlement-list { display: flex; flex-direction: column; gap: .85rem; margin-bottom: 2rem; }
+
+    .settlement-item {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 1rem;
+      padding: 1.1rem 1.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      transition: border-color .2s, transform .2s;
+    }
+    .settlement-item:hover { border-color: var(--primary); transform: translateY(-1px); }
+
+    .settlement-item .parties {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      flex: 1;
+      min-width: 0;
+    }
+    .avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .85rem; color: #fff;
+      flex-shrink: 0;
+    }
+    .avatar.accent { background: linear-gradient(135deg, var(--accent), var(--primary)); }
+
+    .party-name { font-weight: 600; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .party-sub  { font-size: .75rem; color: var(--text-secondary); margin-top: .1rem; }
+
+    .arrow-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .2rem;
+      flex-shrink: 0;
+    }
+    .arrow-amount {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary);
+      white-space: nowrap;
+    }
+    .arrow-icon { font-size: 1.3rem; color: var(--accent); }
+
+    .settlement-actions { display: flex; gap: .5rem; flex-shrink: 0; }
+
+    .btn-settle {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+      border: none;
+      border-radius: .6rem;
+      padding: .45rem .9rem;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+      white-space: nowrap;
+    }
+    .btn-settle:hover { opacity: .88; transform: scale(1.03); }
+
+    .btn-remind {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--glass-border);
+      border-radius: .6rem;
+      padding: .45rem .9rem;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+      white-space: nowrap;
+    }
+    .btn-remind:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Status badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      font-size: .75rem;
+      font-weight: 600;
+      padding: .2rem .65rem;
+      border-radius: 99px;
+    }
+    .status-badge.pending  { background: rgba(251,191,36,.15);  color: #fbbf24; }
+    .status-badge.settled  { background: rgba(52,211,153,.15);  color: #34d399; }
+    .status-badge.partial  { background: rgba(99,102,241,.15);  color: var(--primary); }
+
+    /* History table */
+    .history-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 1rem;
+      overflow: hidden;
+    }
+    .history-card table { width: 100%; border-collapse: collapse; }
+    .history-card th {
+      text-align: left;
+      padding: .85rem 1.2rem;
+      font-size: .75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      border-bottom: 1px solid var(--glass-border);
+      white-space: nowrap;
+    }
+    .history-card td {
+      padding: .9rem 1.2rem;
+      font-size: .88rem;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .history-card tr:last-child td { border-bottom: none; }
+    .history-card tr:hover td { background: rgba(99,102,241,.05); }
+
+    /* Modal overlay */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: #1a1b2e;
+      border: 1px solid var(--glass-border);
+      border-radius: 1.25rem;
+      padding: 2rem;
+      width: min(460px, 92vw);
+      box-shadow: 0 25px 60px rgba(0,0,0,.6);
+    }
+    .modal-box h3 { margin: 0 0 .5rem; font-size: 1.2rem; }
+    .modal-box p  { color: var(--text-secondary); font-size: .9rem; margin: 0 0 1.5rem; }
+    .modal-methods { display: flex; flex-direction: column; gap: .7rem; margin-bottom: 1.5rem; }
+    .method-btn {
+      display: flex; align-items: center; gap: 1rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: .85rem;
+      padding: .9rem 1.1rem;
+      cursor: pointer;
+      transition: border-color .2s;
+      color: var(--text-primary);
+      font-size: .9rem; font-weight: 600;
+    }
+    .method-btn:hover { border-color: var(--primary); }
+    .method-btn .icon { font-size: 1.4rem; }
+    .modal-footer { display: flex; gap: .75rem; justify-content: flex-end; }
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+      border-radius: .65rem;
+      padding: .55rem 1.1rem;
+      font-size: .88rem; font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-confirm {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+      border: none;
+      border-radius: .65rem;
+      padding: .55rem 1.3rem;
+      font-size: .88rem; font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-secondary);
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+    .empty-state p { margin: .4rem 0; }
+    .empty-state .big { font-size: 1.05rem; font-weight: 600; color: var(--text-primary); }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════  SIDEBAR NAV  ════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <a href="index.html">
+      <img src="assets/logo/logo.svg" alt="SharePay" height="36" />
+    </a>
+    <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">✕</button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="index.html"         class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a href="member.html"        class="nav-item"><span class="nav-icon">👥</span> Groups</a>
+    <a href="expense-list.html"  class="nav-item"><span class="nav-icon">💸</span> Expenses</a>
+    <a href="settlement.html"    class="nav-item active"><span class="nav-icon">🤝</span> Settlements</a>
+    <a href="settings.html"      class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <a href="login.html" class="nav-item" id="logoutBtn"><span class="nav-icon">🚪</span> Logout</a>
+  </div>
+</aside>
+
+<!-- ════════════════════  TOPBAR  ════════════════════ -->
+<div class="topbar">
+  <button class="menu-toggle" id="menuToggle" aria-label="Open menu">☰</button>
+  <div class="topbar-title">Settlements</div>
+  <div class="topbar-actions">
+    <button class="btn-icon" title="Notifications" onclick="window.location.href='member.html'">🔔</button>
+    <button class="btn-primary btn-sm" onclick="document.getElementById('recordModal').classList.add('active')">
+      + Record Payment
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════  MAIN CONTENT  ════════════════════ -->
+<main class="main-content">
+
+  <!-- Hero summary -->
+  <div class="settlement-hero">
+    <h2>💰 Your Balance Overview</h2>
+    <p>All debts and credits across your groups, simplified for you.</p>
+  </div>
+
+  <!-- Balance cards -->
+  <div class="balance-cards">
+    <div class="balance-card owed">
+      <div class="label">You Owe</div>
+      <div class="amount" id="totalOwe">$0.00</div>
+    </div>
+    <div class="balance-card owe">
+      <div class="label">You're Owed</div>
+      <div class="amount" id="totalOwed">$0.00</div>
+    </div>
+    <div class="balance-card net">
+      <div class="label">Net Balance</div>
+      <div class="amount" id="netBalance">$0.00</div>
+    </div>
+  </div>
+
+  <!-- Outstanding settlements -->
+  <div class="section-title">
+    🔴 Outstanding Settlements
+    <span class="badge" id="outstandingCount">0</span>
+  </div>
+
+  <div class="settlement-list" id="outstandingList">
+    <!-- Populated by JS -->
+    <div class="empty-state" id="noOutstanding">
+      <div class="icon">🎉</div>
+      <p class="big">All settled up!</p>
+      <p>You have no outstanding debts right now.</p>
+    </div>
+  </div>
+
+  <!-- Settlement history -->
+  <div class="section-title" style="margin-top:2rem;">
+    ✅ Settlement History
+  </div>
+
+  <div class="history-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Amount</th>
+          <th>Method</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody">
+        <tr>
+          <td colspan="6">
+            <div class="empty-state" style="padding:2rem;">
+              <div class="icon">📋</div>
+              <p>No settlement history yet.</p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- ════════════════════  RECORD PAYMENT MODAL  ════════════════════ -->
+<div class="modal-overlay" id="recordModal">
+  <div class="modal-box">
+    <h3>💳 Record a Payment</h3>
+    <p>Choose how the payment was made</p>
+    <div class="modal-methods">
+      <button class="method-btn" onclick="selectMethod('Cash')">
+        <span class="icon">💵</span> Cash
+      </button>
+      <button class="method-btn" onclick="selectMethod('Bank Transfer')">
+        <span class="icon">🏦</span> Bank Transfer
+      </button>
+      <button class="method-btn" onclick="selectMethod('Mobile Pay')">
+        <span class="icon">📱</span> Mobile Pay / PromptPay
+      </button>
+      <button class="method-btn" onclick="selectMethod('Crypto')">
+        <span class="icon">🪙</span> Cryptocurrency
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="document.getElementById('recordModal').classList.remove('active')">Cancel</button>
+      <button class="btn-confirm" id="confirmBtn" disabled onclick="confirmPayment()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════  SCRIPTS  ════════════════════ -->
+<script type="module" src="../js/app.js"></script>
+<script type="module" src="../js/auth.js"></script>
+<script type="module" src="../js/notifications.js"></script>
+<script>
+  // ── Sidebar toggle ──
+  const sidebar   = document.getElementById('sidebar');
+  const menuToggle = document.getElementById('menuToggle');
+  const sidebarClose = document.getElementById('sidebarClose');
+  menuToggle.addEventListener('click',  () => sidebar.classList.add('open'));
+  sidebarClose.addEventListener('click',() => sidebar.classList.remove('open'));
+
+  // ── Settlement data (loaded from Firebase in production) ──
+  let settlements = [];
+  let selectedMethod = null;
+
+  function selectMethod(method) {
+    selectedMethod = method;
+    document.querySelectorAll('.method-btn').forEach(b => b.style.borderColor = '');
+    event.currentTarget.style.borderColor = 'var(--primary)';
+    document.getElementById('confirmBtn').disabled = false;
+  }
+
+  function confirmPayment() {
+    if (!selectedMethod) return;
+    const cfg = window.SharePayConfig;
+    if (!cfg || !cfg.db) {
+      alert('Firebase ยังไม่พร้อม กรุณารีโหลด');
+      return;
+    }
+    const user = cfg.auth?.currentUser;
+    if (!user) { alert('กรุณาเข้าสู่ระบบก่อน'); return; }
+
+    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then(({ addDoc, collection, serverTimestamp }) => {
+      const activeItem = document.querySelector('.settlement-item.selected-for-payment');
+      const settlementData = {
+        paidBy:     user.uid,
+        paidByName: user.displayName || user.email,
+        method:     selectedMethod,
+        status:     'paid',
+        settledAt:  serverTimestamp(),
+        createdAt:  serverTimestamp()
+      };
+      return addDoc(collection(cfg.db, cfg.collections.settlements), settlementData);
+    }).then(() => {
+      // Sync to Google Sheets
+      if (cfg.SheetsAPI) {
+        cfg.SheetsAPI.exportRows(cfg.sheetsConfig.sheets.settlements, [{
+          paidBy:    user?.displayName || user?.email,
+          method:    selectedMethod,
+          status:    'paid',
+          settledAt: new Date().toISOString()
+        }]).catch(e => console.warn('[SheetsAPI] settlement sync:', e));
+      }
+      document.getElementById('recordModal').classList.remove('active');
+      selectedMethod = null;
+      document.getElementById('confirmBtn').disabled = true;
+      showToast('บันทึกการชำระเงินสำเร็จ ✅', 'success');
+    }).catch(err => {
+      console.error('Settlement error:', err);
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+    });
+  }
+
+  function renderBalances(data) {
+    let owe = 0, owed = 0;
+    data.forEach(s => {
+      if (s.direction === 'owe') owe  += s.amount;
+      else                       owed += s.amount;
+    });
+    const net = owed - owe;
+    document.getElementById('totalOwe').textContent   = `$${owe.toFixed(2)}`;
+    document.getElementById('totalOwed').textContent  = `$${owed.toFixed(2)}`;
+    document.getElementById('netBalance').textContent = (net >= 0 ? '+' : '') + `$${net.toFixed(2)}`;
+    document.getElementById('netBalance').style.color = net >= 0 ? '#34d399' : '#f87171';
+  }
+
+  function renderOutstanding(data) {
+    const list  = document.getElementById('outstandingList');
+    const noMsg = document.getElementById('noOutstanding');
+    const badge = document.getElementById('outstandingCount');
+    const pending = data.filter(s => s.status === 'pending');
+    badge.textContent = pending.length;
+    if (pending.length === 0) { noMsg.style.display = 'block'; return; }
+    noMsg.style.display = 'none';
+
+    pending.forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'settlement-item';
+      item.innerHTML = `
+        <div class="parties">
+          <div class="avatar">${s.from[0]}</div>
+          <div>
+            <div class="party-name">${s.from}</div>
+            <div class="party-sub">${s.group}</div>
+          </div>
+        </div>
+        <div class="arrow-block">
+          <span class="arrow-amount">$${s.amount.toFixed(2)}</span>
+          <span class="arrow-icon">→</span>
+        </div>
+        <div class="parties">
+          <div class="avatar accent">${s.to[0]}</div>
+          <div>
+            <div class="party-name">${s.to}</div>
+            <div class="party-sub">${s.dueDate || 'No due date'}</div>
+          </div>
+        </div>
+        <div class="settlement-actions">
+          <button class="btn-settle" onclick="openSettle('${s.id}')">Settle</button>
+          <button class="btn-remind" onclick="sendReminder('${s.id}')">Remind</button>
+        </div>`;
+      list.appendChild(item);
+    });
+  }
+
+  function openSettle(id) {
+    document.getElementById('recordModal').classList.add('active');
+  }
+
+  function sendReminder(id) {
+    // In production, trigger Firebase Cloud Function / notification
+    alert('Reminder sent! (Notification would be sent via Firebase)');
+  }
+
+  function renderHistory(history) {
+    const tbody = document.getElementById('historyBody');
+    if (!history.length) return;
+    tbody.innerHTML = '';
+    history.forEach(h => {
+      const statusClass = h.status === 'settled' ? 'settled' : h.status === 'partial' ? 'partial' : 'pending';
+      tbody.innerHTML += `
+        <tr>
+          <td>${h.date}</td>
+          <td><strong>${h.from}</strong></td>
+          <td>${h.to}</td>
+          <td><strong>$${h.amount.toFixed(2)}</strong></td>
+          <td>${h.method}</td>
+          <td><span class="status-badge ${statusClass}">${h.status}</span></td>
+        </tr>`;
+    });
+  }
+
+  // ── Firebase integration ──
+  function loadSettlementData() {
+    // Replace with actual Firebase listener:
+    // db.collection('settlements').where('group', '==', currentGroupId)
+    //   .onSnapshot(snapshot => { ... });
+
+    // Demo data for layout preview:
+    const demo = [
+      { id:'s1', from:'Alice', to:'You', group:'Trip to Bali', amount:45.50, direction:'owed', status:'pending', dueDate:'Jun 30' },
+      { id:'s2', from:'You',   to:'Bob', group:'Monthly Utilities', amount:22.00, direction:'owe',  status:'pending', dueDate:'Jul 1' },
+      { id:'s3', from:'Carol', to:'You', group:'House Party',   amount:18.75, direction:'owed', status:'pending', dueDate:'Jun 28' },
+    ];
+    const history = [
+      { date:'Jun 20, 2026', from:'You',  to:'Dave',  amount:30.00, method:'Cash',          status:'settled' },
+      { date:'Jun 18, 2026', from:'Emma', to:'You',   amount:55.00, method:'Bank Transfer', status:'settled' },
+      { date:'Jun 15, 2026', from:'You',  to:'Frank', amount:12.50, method:'Mobile Pay',    status:'partial' },
+    ];
+
+    renderBalances(demo);
+    renderOutstanding(demo);
+    renderHistory(history);
+  }
+
+  document.addEventListener('DOMContentLoaded', loadSettlementData);
+
+  // Close modal on backdrop click
+  document.getElementById('recordModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('active');
+  });
+</script>
+</body>
+</html>
