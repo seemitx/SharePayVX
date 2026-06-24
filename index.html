@@ -8,7 +8,7 @@
 
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
 
   <!-- Open Graph -->
   <meta property="og:title" content="SharePay – หารค่าใช้จ่ายอย่างง่ายดาย">
@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="./css/main.css">
 
   <style>
     /* Landing page specific */
@@ -574,8 +574,8 @@
     </div>
 
     <div class="navbar-actions">
-      <a href="/login.html" class="btn btn-secondary btn-sm">เข้าสู่ระบบ</a>
-      <a href="/register.html" class="btn btn-primary btn-sm">เริ่มต้นฟรี</a>
+      <a href="./login.html" class="btn btn-secondary btn-sm">เข้าสู่ระบบ</a>
+      <a href="./register.html" class="btn btn-primary btn-sm">เริ่มต้นฟรี</a>
     </div>
   </nav>
 
@@ -606,10 +606,10 @@
         </p>
 
         <div class="hero-cta">
-          <a href="/register.html" class="btn btn-primary btn-hero">
+          <a href="./register.html" class="btn btn-primary btn-hero">
             🚀 เริ่มต้นใช้งานฟรี
           </a>
-          <a href="/login.html" class="btn btn-secondary btn-hero">
+          <a href="./login.html" class="btn btn-secondary btn-hero">
             เข้าสู่ระบบ
           </a>
         </div>
@@ -798,7 +798,7 @@
         <p style="color: var(--text-secondary); margin-bottom: var(--space-8); font-size: var(--text-base);">
           เริ่มใช้งานฟรี ไม่ต้องใส่บัตรเครดิต
         </p>
-        <a href="/register.html" class="btn btn-primary btn-hero">
+        <a href="./register.html" class="btn btn-primary btn-hero">
           🎉 สมัครฟรีเดี๋ยวนี้
         </a>
       </div>
@@ -821,8 +821,8 @@
           const { db } = window.SharePayConfig;
           const userDoc = await getDoc(doc(db, collections.users, user.uid));
           const role = userDoc.exists() ? userDoc.data().role : 'member';
-          window.location.href = role === 'admin' ? '/admin.html' : '/member.html';
-        } catch { window.location.href = '/member.html'; }
+          window.location.href = role === 'admin' ? './admin.html' : './member.html';
+        } catch { window.location.href = './member.html'; }
       }
     });
 
