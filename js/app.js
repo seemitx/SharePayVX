@@ -43,7 +43,7 @@ export const storage = getStorage(app);
 
 // ===== Google Apps Script URL =====
 // TODO: วาง URL จาก Google Apps Script Deployment ที่นี่
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzx8T4h8ZkG4EgLFDnPLe8vX2ZEAt6IqOVKqcWTfXWVio1XUltOum6q-iaGLmwXKAxl/exec";
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxvWnUSqajlCC9T7RUVPZqVMCAQvgYH9ktmo4xHpFLaSTwpcxox61Avj1PVE2vKOaDQ/exec";
 
 export const sheetsConfig = {
   webAppUrl: GOOGLE_APPS_SCRIPT_URL,
