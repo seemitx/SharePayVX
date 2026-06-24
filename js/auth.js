@@ -3,7 +3,7 @@
  * จัดการระบบ Authentication ทั้งหมด รวมถึง Login, Register, Logout
  */
 
-import { auth, db, storage, collections } from './app.js';
+import { auth, db, storage, collections } from 'app.js';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
