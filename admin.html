@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Admin Dashboard – SharePay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<!-- Page Loader -->
+<div class="loading-overlay" id="page-loader">
+  <div class="loading-logo">
+    <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="10" fill="url(#grad-loader)"/>
+      <path d="M8 20L14 12L19 17L24 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="24" cy="10" r="2" fill="white"/>
+      <defs>
+        <linearGradient id="grad-loader" x1="0" y1="0" x2="32" y2="32">
+          <stop stop-color="#6366F1"/><stop offset="1" stop-color="#8B5CF6"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+  <div class="spinner"></div>
+  <p class="loading-text">กำลังโหลด...</p>
+</div>
+
+<!-- Sidebar Backdrop (Mobile) -->
+<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+<div class="admin-layout">
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="admin-sidebar" id="admin-sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="10" fill="url(#grad-sb)"/>
+          <path d="M8 20L14 12L19 17L24 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="24" cy="10" r="2" fill="white"/>
+          <defs>
+            <linearGradient id="grad-sb" x1="0" y1="0" x2="32" y2="32">
+              <stop stop-color="#6366F1"/><stop offset="1" stop-color="#8B5CF6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <span class="sidebar-brand">SharePay</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-nav-group">
+        <div class="nav-group-label">หลัก</div>
+        <a class="nav-link active" data-section="dashboard" href="#">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a class="nav-link" data-section="members" href="#">
+          <span class="nav-icon">👥</span>
+          <span class="nav-label">สมาชิก</span>
+          <span class="nav-badge" id="members-count">0</span>
+        </a>
+        <a class="nav-link" data-section="groups" href="#">
+          <span class="nav-icon">🗂️</span>
+          <span class="nav-label">กลุ่มทั้งหมด</span>
+        </a>
+      </div>
+
+      <div class="sidebar-nav-group">
+        <div class="nav-group-label">การเงิน</div>
+        <a class="nav-link" data-section="all-expenses" href="#">
+          <span class="nav-icon">💸</span>
+          <span class="nav-label">ค่าใช้จ่ายทั้งหมด</span>
+        </a>
+        <a class="nav-link" data-section="settlements" href="#">
+          <span class="nav-icon">✅</span>
+          <span class="nav-label">การชำระ</span>
+        </a>
+        <a class="nav-link" data-section="reports" href="#">
+          <span class="nav-icon">📈</span>
+          <span class="nav-label">รายงาน</span>
+        </a>
+      </div>
+
+      <div class="sidebar-nav-group">
+        <div class="nav-group-label">ระบบ</div>
+        <a class="nav-link" data-section="settings" href="#">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">ตั้งค่า</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user" id="sidebar-user">
+        <img src="https://ui-avatars.com/api/?name=Admin&background=6366F1&color=fff" alt="Admin" class="sidebar-avatar" id="sidebar-avatar">
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Admin</div>
+          <div class="sidebar-user-role">Administrator</div>
+        </div>
+      </div>
+      <button class="nav-link w-full" id="logout-btn" style="width: 100%; cursor: pointer; margin-top: var(--space-2); background: none; color: var(--accent-red);">
+        <span class="nav-icon">🚪</span>
+        <span class="nav-label">ออกจากระบบ</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="admin-main">
+    <!-- Top Bar -->
+    <header class="admin-topbar">
+      <div class="topbar-left">
+        <button class="sidebar-toggle-btn" id="sidebar-toggle">☰</button>
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+      </div>
+
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="global-search" placeholder="ค้นหาสมาชิก กลุ่ม หรือค่าใช้จ่าย...">
+      </div>
+
+      <div class="topbar-right">
+        <button class="theme-toggle-btn" id="dark-mode-toggle" title="สลับโหมด">🌙</button>
+
+        <!-- Notification Bell -->
+        <div class="notif-bell" id="notif-bell">
+          <button class="btn-icon" id="notif-toggle">🔔</button>
+          <span class="notif-badge" id="notif-badge">0</span>
+          <div class="notif-dropdown" id="notif-list">
+            <p class="notif-empty">ไม่มีการแจ้งเตือน</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="admin-content">
+
+      <!-- ===== DASHBOARD SECTION ===== -->
+      <section class="admin-section active" id="dashboard">
+        <!-- Stat Cards -->
+        <div class="dashboard-grid stagger">
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-label">สมาชิกทั้งหมด</div>
+            <div class="stat-value" id="stat-users">0</div>
+            <div class="stat-change up">↑ เพิ่มขึ้นจากเดือนที่แล้ว</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🗂️</div>
+            <div class="stat-label">กลุ่มทั้งหมด</div>
+            <div class="stat-value" id="stat-groups">0</div>
+            <div class="stat-change up">↑ กลุ่มที่ยังใช้งาน</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-label">ค่าใช้จ่ายรวม</div>
+            <div class="stat-value" id="stat-expenses">฿0</div>
+            <div class="stat-change up">↑ เดือนนี้</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-label">ค้างชำระ</div>
+            <div class="stat-value" id="stat-pending">฿0</div>
+            <div class="stat-change down">↓ รอยืนยัน</div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">
+              <span>หมวดหมู่ค่าใช้จ่าย</span>
+              <select class="form-select" style="width: auto; padding: 4px 2rem 4px var(--space-3); font-size: var(--text-xs);">
+                <option>เดือนนี้</option>
+                <option>3 เดือน</option>
+                <option>ทั้งหมด</option>
+              </select>
+            </div>
+            <div class="chart-container">
+              <canvas id="categoryChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">
+              <span>ค่าใช้จ่ายรายเดือน</span>
+              <select class="form-select" style="width: auto; padding: 4px 2rem 4px var(--space-3); font-size: var(--text-xs);">
+                <option>12 เดือน</option>
+                <option>6 เดือน</option>
+                <option>3 เดือน</option>
+              </select>
+            </div>
+            <div class="chart-container">
+              <canvas id="monthlyChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="activity-section">
+          <div class="section-header">
+            <h2 class="section-title">กิจกรรมล่าสุด</h2>
+            <button class="btn btn-secondary btn-sm">ดูทั้งหมด</button>
+          </div>
+          <div id="recent-activities">
+            <div class="empty-state">
+              <span class="empty-icon">📭</span>
+              <p>กำลังโหลด...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== MEMBERS SECTION ===== -->
+      <section class="admin-section" id="members">
+        <div class="section-toolbar">
+          <div class="toolbar-search">
+            <span class="search-icon">🔍</span>
+            <input type="search" placeholder="ค้นหาสมาชิก..." id="member-search">
+          </div>
+          <div style="display: flex; gap: var(--space-3);">
+            <select class="form-select" style="width: auto;" id="role-filter">
+              <option value="">ทุก Role</option>
+              <option value="admin">Admin</option>
+              <option value="member">Member</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="invite-member-btn">
+              + เชิญสมาชิก
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>สมาชิก</th>
+                <th>อีเมล</th>
+                <th>Role</th>
+                <th>วันที่สมัคร</th>
+                <th>เข้าสู่ระบบล่าสุด</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="members-table-body">
+              <tr>
+                <td colspan="6" class="loading-cell"><div class="spinner"></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="members-pagination">
+          <button class="page-btn">‹</button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <button class="page-btn">›</button>
+        </div>
+      </section>
+
+      <!-- ===== GROUPS SECTION ===== -->
+      <section class="admin-section" id="groups">
+        <div class="section-toolbar">
+          <div class="toolbar-search">
+            <span class="search-icon">🔍</span>
+            <input type="search" placeholder="ค้นหากลุ่ม..." id="group-search">
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ชื่อกลุ่ม</th>
+                <th>เจ้าของ</th>
+                <th>สมาชิก</th>
+                <th>ค่าใช้จ่ายรวม</th>
+                <th>วันที่สร้าง</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="groups-table-body">
+              <tr>
+                <td colspan="6" class="loading-cell"><div class="spinner"></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== ALL EXPENSES SECTION ===== -->
+      <section class="admin-section" id="all-expenses">
+        <div class="section-toolbar">
+          <div class="toolbar-search">
+            <span class="search-icon">🔍</span>
+            <input type="search" placeholder="ค้นหาค่าใช้จ่าย..." id="expense-search">
+          </div>
+          <div style="display: flex; gap: var(--space-3);">
+            <select class="form-select" style="width: auto;" id="category-filter">
+              <option value="">ทุกหมวดหมู่</option>
+              <option value="food">ค่าอาหาร</option>
+              <option value="fuel">ค่าน้ำมัน</option>
+              <option value="accommodation">ค่าที่พัก</option>
+              <option value="transport">ค่าเดินทาง</option>
+              <option value="drinks">ค่าเครื่องดื่ม</option>
+              <option value="entertainment">ความบันเทิง</option>
+              <option value="other">อื่นๆ</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" id="export-excel-btn">📊 Export Excel</button>
+            <button class="btn btn-secondary btn-sm" id="export-pdf-btn">📄 Export PDF</button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>รายการ</th>
+                <th>หมวดหมู่</th>
+                <th>กลุ่ม</th>
+                <th>ผู้จ่าย</th>
+                <th>จำนวนเงิน</th>
+                <th>หารกัน</th>
+                <th>วันที่</th>
+              </tr>
+            </thead>
+            <tbody id="expenses-table-body">
+              <tr>
+                <td colspan="7" class="loading-cell"><div class="spinner"></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== SETTLEMENTS SECTION ===== -->
+      <section class="admin-section" id="settlements">
+        <div class="section-toolbar">
+          <select class="form-select" style="width: auto;" id="settlement-filter">
+            <option value="">ทุกสถานะ</option>
+            <option value="pending">รอยืนยัน</option>
+            <option value="confirmed">ยืนยันแล้ว</option>
+          </select>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>จาก</th>
+                <th>ถึง</th>
+                <th>จำนวน</th>
+                <th>สถานะ</th>
+                <th>วันที่แจ้ง</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="settlements-table-body">
+              <tr>
+                <td colspan="6" class="loading-cell"><div class="spinner"></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== REPORTS SECTION ===== -->
+      <section class="admin-section" id="reports">
+        <div class="report-filters" style="margin-bottom: var(--space-6);">
+          <button class="filter-btn active" data-period="daily">รายวัน</button>
+          <button class="filter-btn" data-period="weekly">รายสัปดาห์</button>
+          <button class="filter-btn" data-period="monthly">รายเดือน</button>
+          <button class="filter-btn" data-period="yearly">รายปี</button>
+        </div>
+
+        <div class="reports-grid">
+          <div class="report-card">
+            <h3 class="section-title" style="margin-bottom: var(--space-4);">ค่าใช้จ่ายตามช่วงเวลา</h3>
+            <div class="chart-container">
+              <canvas id="reportTimeChart"></canvas>
+            </div>
+          </div>
+          <div class="report-card">
+            <h3 class="section-title" style="margin-bottom: var(--space-4);">สัดส่วนหมวดหมู่</h3>
+            <div class="chart-container">
+              <canvas id="reportCatChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="export-buttons" style="margin-top: var(--space-6);">
+          <button class="btn btn-secondary" id="report-export-pdf">
+            📄 Export PDF
+          </button>
+          <button class="btn btn-secondary" id="report-export-excel">
+            📊 Export Excel
+          </button>
+          <button class="btn btn-secondary" id="report-export-sheets">
+            📋 Sync Google Sheets
+          </button>
+        </div>
+      </section>
+
+      <!-- ===== SETTINGS SECTION ===== -->
+      <section class="admin-section" id="settings">
+        <div class="settings-grid">
+          <nav class="settings-nav">
+            <a class="nav-link active" data-settings="general">⚙️ ทั่วไป</a>
+            <a class="nav-link" data-settings="appearance">🎨 หน้าตา</a>
+            <a class="nav-link" data-settings="notifications">🔔 การแจ้งเตือน</a>
+            <a class="nav-link" data-settings="integrations">🔌 การเชื่อมต่อ</a>
+            <a class="nav-link" data-settings="security">🔒 ความปลอดภัย</a>
+          </nav>
+
+          <div class="settings-content">
+            <!-- General -->
+            <div class="settings-section active" id="settings-general">
+              <div class="settings-group">
+                <h3 class="settings-group-title">ข้อมูลแอปพลิเคชัน</h3>
+                <div class="settings-row">
+                  <span class="settings-label">ชื่อแอปพลิเคชัน</span>
+                  <input type="text" class="form-input" value="SharePay" style="width: 200px;">
+                </div>
+                <div class="settings-row">
+                  <span class="settings-label">สกุลเงินหลัก</span>
+                  <select class="form-select" style="width: 120px;">
+                    <option>THB (฿)</option>
+                    <option>USD ($)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <h3 class="settings-group-title">Google Apps Script</h3>
+                <div class="form-group">
+                  <label class="form-label">Web App URL</label>
+                  <input type="url" class="form-input" id="sheets-url" placeholder="https://script.google.com/macros/s/...">
+                </div>
+                <button class="btn btn-primary btn-sm" style="margin-top: var(--space-3);" id="test-sheets-btn">
+                  🧪 ทดสอบการเชื่อมต่อ
+                </button>
+              </div>
+
+              <button class="btn btn-primary" id="save-settings-btn">💾 บันทึกการตั้งค่า</button>
+            </div>
+
+            <!-- Appearance -->
+            <div class="settings-section" id="settings-appearance">
+              <div class="settings-group">
+                <h3 class="settings-group-title">โหมดสี</h3>
+                <div class="settings-row">
+                  <span class="settings-label">Dark Mode</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="dark-mode-setting" checked>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="settings-section" id="settings-notifications">
+              <div class="settings-group">
+                <h3 class="settings-group-title">การแจ้งเตือน</h3>
+                <div class="settings-row">
+                  <span class="settings-label">ค่าใช้จ่ายใหม่</span>
+                  <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                </div>
+                <div class="settings-row">
+                  <span class="settings-label">การชำระเงิน</span>
+                  <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                </div>
+                <div class="settings-row">
+                  <span class="settings-label">สมาชิกเข้า/ออกกลุ่ม</span>
+                  <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Integrations -->
+            <div class="settings-section" id="settings-integrations">
+              <div class="settings-group">
+                <h3 class="settings-group-title">Google Sheets Integration</h3>
+                <p style="font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-5); line-height: 1.6;">
+                  เชื่อมต่อกับ Google Apps Script เพื่อ sync ข้อมูลไปยัง Google Sheets อัตโนมัติ
+                </p>
+                <div class="form-group">
+                  <label class="form-label">Google Apps Script Web App URL</label>
+                  <input type="url" class="form-input" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec">
+                </div>
+                <div style="display: flex; gap: var(--space-3); margin-top: var(--space-4);">
+                  <button class="btn btn-primary btn-sm">🔌 เชื่อมต่อ</button>
+                  <button class="btn btn-secondary btn-sm">📋 ดู Template</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Security -->
+            <div class="settings-section" id="settings-security">
+              <div class="settings-group">
+                <h3 class="settings-group-title">ความปลอดภัย</h3>
+                <div class="settings-row">
+                  <span class="settings-label">Two-Factor Authentication</span>
+                  <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+                </div>
+                <div class="settings-row">
+                  <span class="settings-label">Session Timeout</span>
+                  <select class="form-select" style="width: 150px;">
+                    <option>24 ชั่วโมง</option>
+                    <option>7 วัน</option>
+                    <option>30 วัน</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+  // Toast global
+  window.SharePay = {
+    showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `<span>${icons[type]}</span> ${message}`;
+      container.appendChild(toast);
+      setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 3500);
+    }
+  };
+
+  // Sidebar toggle
+  const sidebar = document.getElementById('admin-sidebar');
+  const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => {
+    if (window.innerWidth < 768) {
+      sidebar.classList.toggle('mobile-open');
+      sidebarBackdrop.classList.toggle('active');
+    } else {
+      sidebar.classList.toggle('collapsed');
+    }
+  });
+
+  sidebarBackdrop.addEventListener('click', () => {
+    sidebar.classList.remove('mobile-open');
+    sidebarBackdrop.classList.remove('active');
+  });
+
+  // Navigation
+  const navLinks = document.querySelectorAll('.sidebar-nav .nav-link[data-section]');
+  const sections = document.querySelectorAll('.admin-section');
+  const pageTitle = document.getElementById('page-title');
+
+  const titles = {
+    dashboard: 'Dashboard',
+    members: 'สมาชิก',
+    groups: 'กลุ่มทั้งหมด',
+    'all-expenses': 'ค่าใช้จ่ายทั้งหมด',
+    settlements: 'การชำระ',
+    reports: 'รายงาน',
+    settings: 'ตั้งค่า'
+  };
+
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = link.dataset.section;
+      navLinks.forEach(l => l.classList.remove('active'));
+      sections.forEach(s => s.classList.remove('active'));
+      link.classList.add('active');
+      const section = document.getElementById(target);
+      if (section) section.classList.add('active');
+      pageTitle.textContent = titles[target] || target;
+      if (window.innerWidth < 768) {
+        sidebar.classList.remove('mobile-open');
+        sidebarBackdrop.classList.remove('active');
+      }
+    });
+  });
+
+  // Settings nav
+  document.querySelectorAll('.settings-nav .nav-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = link.dataset.settings;
+      document.querySelectorAll('.settings-nav .nav-link').forEach(l => l.classList.remove('active'));
+      document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+      link.classList.add('active');
+      const section = document.getElementById('settings-' + target);
+      if (section) section.classList.add('active');
+    });
+  });
+
+  // Notification bell
+  document.getElementById('notif-toggle').addEventListener('click', () => {
+    document.getElementById('notif-bell').classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#notif-bell')) {
+      document.getElementById('notif-bell').classList.remove('open');
+    }
+  });
+
+  // Dark mode
+  const theme = localStorage.getItem('sharepay-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  const dmBtn = document.getElementById('dark-mode-toggle');
+  dmBtn.textContent = theme === 'dark' ? '🌙' : '☀️';
+  dmBtn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('sharepay-theme', next);
+    dmBtn.textContent = next === 'dark' ? '🌙' : '☀️';
+  });
+
+  // Report filter buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+</script>
+
+<script type="module" src="/js/admin.js"></script>
+</body>
+</html>
