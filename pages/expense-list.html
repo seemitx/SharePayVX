@@ -446,7 +446,7 @@
 
     // ── Init ────────────────────────────────────────────────────────────────
     onAuthStateChanged(auth, user => {
-      if (!user) { window.location.href = '/login.html'; return; }
+      if (!user) { window.location.href = '../login.html'; return; }
       currentUser = user;
       document.getElementById('userName').textContent = user.displayName || user.email || 'User';
       document.getElementById('userAvatar').textContent = (user.displayName || user.email || 'U')[0].toUpperCase();
