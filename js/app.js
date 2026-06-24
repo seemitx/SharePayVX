@@ -75,7 +75,7 @@ export const SheetsAPI = {
    * @param {any}    data
    */
   async call(action, sheetName, data = null) {
-    if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL") {
+    if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbwPbMVvvexhfZoo-pnK4kjbv0DEuYIf4Wz0geQk-_qb_2X46Cfy6cEn89h1QyACFfWs/exec") {
       console.warn("[SheetsAPI] URL ยังไม่ได้ตั้งค่า — ข้ามการส่งข้อมูล");
       return null;
     }
