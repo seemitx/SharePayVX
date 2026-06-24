@@ -52,19 +52,6 @@ export const auth    = getAuth(app);
 export const db      = getFirestore(app);
 export const storage = getStorage(app);
 
-// ===== Google Apps Script URL =====
-// TODO: วาง URL จาก Google Apps Script Deployment ที่นี่
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwPbMVvvexhfZoo-pnK4kjbv0DEuYIf4Wz0geQk-_qb_2X46Cfy6cEn89h1QyACFfWs/exec";
-
-export const sheetsConfig = {
-  webAppUrl: GOOGLE_APPS_SCRIPT_URL,
-  sheets: {
-    expenses:    "Expenses",
-    settlements: "Settlements",
-    members:     "Members",
-    groups:      "Groups"
-  }
-};
 
 // ===== Google Sheets / Apps Script API Layer =====
 export const SheetsAPI = {
