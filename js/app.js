@@ -52,55 +52,17 @@ export const auth    = getAuth(app);
 export const db      = getFirestore(app);
 export const storage = getStorage(app);
 
+// ===== Google Apps Script URL =====
+// TODO: วาง URL จาก Google Apps Script Deployment ที่นี่
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwPbMVvvexhfZoo-pnK4kjbv0DEuYIf4Wz0geQk-_qb_2X46Cfy6cEn89h1QyACFfWs/exec";
 
-// ===== Google Sheets / Apps Script API Layer =====
-export const SheetsAPI = {
-  /**
-   * เรียก Google Apps Script
-   * @param {'export'|'get'|'update'|'delete'} action
-   * @param {string} sheetName
-   * @param {any}    data
-   */
-  async call(action, sheetName, data = null) {
-    if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbwPbMVvvexhfZoo-pnK4kjbv0DEuYIf4Wz0geQk-_qb_2X46Cfy6cEn89h1QyACFfWs/exec") {
-      console.warn("[SheetsAPI] URL ยังไม่ได้ตั้งค่า — ข้ามการส่งข้อมูล");
-      return null;
-    }
-    const body = { action, sheetName };
-    if (data !== null) body.data = data;
-
-    try {
-      const res = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(body)
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (err) {
-      console.error("[SheetsAPI] Error:", err);
-      throw err;
-    }
-  },
-
-  /** เพิ่ม/อัปเดต rows ใน Sheet */
-  exportRows(sheetName, rows) {
-    return this.call("export", sheetName, rows);
-  },
-
-  /** ดึงข้อมูลทั้งหมดจาก Sheet */
-  getRows(sheetName) {
-    return this.call("get", sheetName);
-  },
-
-  /** อัปเดตแถวตาม id */
-  updateRow(sheetName, id, data) {
-    return this.call("update", sheetName, { id, ...data });
-  },
-
-  /** ลบแถวตาม id */
-  deleteRow(sheetName, id) {
-    return this.call("delete", sheetName, { id });
+export const sheetsConfig = {
+  webAppUrl: GOOGLE_APPS_SCRIPT_URL,
+  sheets: {
+    expenses:    "Expenses",
+    settlements: "Settlements",
+    members:     "Members",
+    groups:      "Groups"
   }
 };
 
