@@ -133,7 +133,7 @@ export async function logoutUser() {
   try {
     await signOut(auth);
     showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
-    window.location.href = '/index.html';
+    window.location.href = '/SharePay/index.html';
   } catch (error) {
     console.error('Logout error:', error);
     throw error;
@@ -214,14 +214,14 @@ export function routeGuard(requiredRole = null) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       unsubscribe();
       if (!user) {
-        window.location.href = '/login.html';
+        window.location.href = '/SharePay/login.html';
         return;
       }
 
       if (requiredRole) {
         const userData = await getUserData(user.uid);
         if (!userData || userData.role !== requiredRole) {
-          window.location.href = '/member.html';
+          window.location.href = '/SharePay/member.html';
           return;
         }
       }
