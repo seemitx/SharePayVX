@@ -16,6 +16,14 @@ import { getFirestore }   from "https://www.gstatic.com/firebasejs/10.7.1/fireba
 import { getStorage }     from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 // ===== Firebase Config =====
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDgf7rYlJriOnE8_ieyCkY52sNWE2Upg_I",
   authDomain: "sharepay-36d88.firebaseapp.com",
@@ -26,6 +34,9 @@ const firebaseConfig = {
   measurementId: "G-Y47T7B2CRV"
 };
 
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 // ===== Firestore Collection Names =====
 export const collections = {
   users:         "users",
