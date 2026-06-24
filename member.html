@@ -8,9 +8,9 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/main.css">
-  <link rel="stylesheet" href="/css/member.css">
-  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/member.css">
+  <link rel="stylesheet" href="./css/responsive.css">
 </head>
 <body>
 
@@ -548,11 +548,11 @@
   // Settings & Profile links
   document.getElementById('settings-link')?.addEventListener('click', (e) => {
     e.preventDefault();
-    window.location.href = '/pages/settings.html';
+    window.location.href = './pages/settings.html';
   });
   document.getElementById('profile-link')?.addEventListener('click', (e) => {
     e.preventDefault();
-    window.location.href = '/pages/settings.html#profile';
+    window.location.href = './pages/settings.html#profile';
   });
 
   // Filter buttons
@@ -572,6 +572,6 @@
   });
 </script>
 
-<script type="module" src="/js/member.js"></script>
+<script type="module" src="./js/member.js"></script>
 </body>
 </html>
