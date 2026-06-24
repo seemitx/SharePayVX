@@ -6,7 +6,7 @@
   <title>สมัครสมาชิก – SharePay</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="css/main.css">
   <style>
     /* Reuse auth styles from login + additions */
     .auth-page {
@@ -575,7 +575,7 @@
       try {
         await registerUser(name, email, password, avatarFile);
         // Redirect to member dashboard
-        setTimeout(() => { window.location.href = './member.html'; }, 1000);
+        setTimeout(() => { window.location.href = 'member.html'; }, 1000);
       } catch (err) {
         btn.classList.remove('loading');
         document.getElementById('reg-spinner').style.display = 'none';
