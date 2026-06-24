@@ -66,6 +66,57 @@ export const sheetsConfig = {
   }
 };
 
+// ===== Google Sheets / Apps Script API Layer =====
+export const SheetsAPI = {
+  /**
+   * เรียก Google Apps Script
+   * @param {'export'|'get'|'update'|'delete'} action
+   * @param {string} sheetName
+   * @param {any}    data
+   */
+  async call(action, sheetName, data = null) {
+    if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL === "GOOGLE_APPS_SCRIPT_URL") {
+      console.warn("[SheetsAPI] URL ยังไม่ได้ตั้งค่า — ข้ามการส่งข้อมูล");
+      return null;
+    }
+    const body = { action, sheetName };
+    if (data !== null) body.data = data;
+
+    try {
+      const res = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.error("[SheetsAPI] Error:", err);
+      throw err;
+    }
+  },
+
+  /** เพิ่ม/อัปเดต rows ใน Sheet */
+  exportRows(sheetName, rows) {
+    return this.call("export", sheetName, rows);
+  },
+
+  /** ดึงข้อมูลทั้งหมดจาก Sheet */
+  getRows(sheetName) {
+    return this.call("get", sheetName);
+  },
+
+  /** อัปเดตแถวตาม id */
+  updateRow(sheetName, id, data) {
+    return this.call("update", sheetName, { id, ...data });
+  },
+
+  /** ลบแถวตาม id */
+  deleteRow(sheetName, id) {
+    return this.call("delete", sheetName, { id });
+  }
+};
+
 // ===== Sync to global (สำหรับ non-module scripts) =====
 window.SharePayConfig = {
   app, auth, db, storage,
