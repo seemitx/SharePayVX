@@ -244,7 +244,7 @@ function initCreateGroupForm() {
 
 // ===== Navigate to Group =====
 window.navigateToGroup = (groupId) => {
-  window.location.href = './pages/expense-list.html?groupId=' + groupId;
+  window.location.href = '../pages/expense-list.html?groupId=' + groupId;
 };
 
 // ===== Navigation =====
