@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initNavigation();
   initDarkMode();
 
+  initCreateGroupForm();
   const unsubNotif = listenToNotifications(currentUser.uid, updateNotificationBell);
   unsubscribers.push(unsubNotif);
 });
@@ -180,15 +181,15 @@ window.closeCreateGroupModal = () => {
   if (modal) modal.classList.remove('active');
 };
 
-// ===== Handle Create Group =====
-const createGroupForm = document.getElementById('create-group-form');
-if (createGroupForm) {
+// ===== Handle Create Group (เรียกจาก DOMContentLoaded) =====
+function initCreateGroupForm() {
+  const createGroupForm = document.getElementById('create-group-form');
+  if (!createGroupForm) return;
+
   createGroupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const groupName = document.getElementById('group-name').value.trim();
-    const groupDesc = document.getElementById('group-desc').value.trim();
-    
+    const groupName = document.getElementById('group-name')?.value.trim();
+    const groupDesc = document.getElementById('group-desc')?.value.trim() || '';
     if (!groupName) return;
 
     try {
@@ -199,41 +200,51 @@ if (createGroupForm) {
         ownerName: currentUserData?.name,
         members: [currentUser.uid],
         memberNames: [currentUserData?.name],
+        memberEmails: [currentUser.email],
         memberDetails: [{
           uid: currentUser.uid,
           name: currentUserData?.name,
           avatar: currentUserData?.avatar,
+          email: currentUser.email,
           role: 'owner'
         }],
         totalExpenses: 0,
         expenseCount: 0,
+        settled: false,
         createdAt: serverTimestamp(),
         lastActivity: serverTimestamp()
       };
 
       const docRef = await addDoc(collection(db, collections.groups), groupData);
-      
-      // อัปเดต user's groups
+
       await updateDoc(doc(db, collections.users, currentUser.uid), {
         groups: arrayUnion(docRef.id)
       });
 
+      // Sync กลุ่มใหม่ → Google Sheets (best-effort)
+      const { SheetsAPI, sheetsConfig } = await import('./app.js');
+      SheetsAPI.exportRows(sheetsConfig.sheets.groups, [{
+        id:        docRef.id,
+        groupName: groupName,
+        ownerId:   currentUser.uid,
+        ownerName: currentUserData?.name,
+        createdAt: new Date().toISOString()
+      }]).catch(e => console.warn('[SheetsAPI] group sync:', e));
+
       showToast('สร้างกลุ่มสำเร็จ! 🎉', 'success');
       closeCreateGroupModal();
-      
-      // Refresh dashboard
       await initMemberDashboard();
-      
+
     } catch (error) {
       console.error('Error creating group:', error);
-      showToast('เกิดข้อผิดพลาดในการสร้างกลุ่ม', 'error');
+      showToast('เกิดข้อผิดพลาดในการสร้างกลุ่ม: ' + error.message, 'error');
     }
   });
 }
 
 // ===== Navigate to Group =====
 window.navigateToGroup = (groupId) => {
-  window.location.href = `/pages/expense-list.html?groupId=${groupId}`;
+  window.location.href = './pages/expense-list.html?groupId=' + groupId;
 };
 
 // ===== Navigation =====
