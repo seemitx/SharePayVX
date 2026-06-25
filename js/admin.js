@@ -3,10 +3,10 @@
  * จัดการหน้า Admin Dashboard และฟังก์ชันสำหรับผู้ดูแลระบบ
  */
 
-import { auth, db, collections } from './app.js';
-import { routeGuard, logoutUser } from './auth.js';
-import { getAdminStats, getRecentActivities, buildCategoryChartData } from './dashboard.js';
-import { listenToNotifications, markAllAsRead } from './notifications.js';
+import { auth, db, collections } from './js/app.js';
+import { routeGuard, logoutUser } from './js/auth.js';
+import { getAdminStats, getRecentActivities, buildCategoryChartData } from './js/dashboard.js';
+import { listenToNotifications, markAllAsRead } from './js/notifications.js';
 import {
   collection, query, getDocs, doc, updateDoc, deleteDoc,
   orderBy, onSnapshot, where, serverTimestamp
