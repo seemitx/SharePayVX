@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366F1">
+  <title>Dashboard – SharePay</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/member.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<!-- Page Loader -->
+<div class="loading-overlay" id="page-loader">
+  <svg width="48" height="48" viewBox="0 0 32 32" fill="none" class="loading-logo">
+    <rect width="32" height="32" rx="10" fill="url(#g1)"/>
+    <path d="M8 20L14 12L19 17L24 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="24" cy="10" r="2" fill="white"/>
+    <defs><linearGradient id="g1" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#6366F1"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+  </svg>
+  <div class="spinner"></div>
+</div>
+
+<div class="member-layout">
+  <!-- ===== HEADER ===== -->
+  <header class="member-header">
+    <div class="member-header-logo">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="10" fill="url(#gh)"/>
+        <path d="M8 20L14 12L19 17L24 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="24" cy="10" r="2" fill="white"/>
+        <defs><linearGradient id="gh" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#6366F1"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+      </svg>
+      SharePay
+    </div>
+
+    <div class="member-header-actions">
+      <!-- Theme Toggle -->
+      <button class="btn-icon" id="theme-toggle" title="สลับโหมด">🌙</button>
+
+      <!-- Notification Bell -->
+      <div class="notif-bell" id="notif-bell">
+        <button class="btn-icon" id="notif-toggle">🔔</button>
+        <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+        <div class="notif-dropdown" id="notif-dropdown">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--space-3);">
+            <strong style="font-size: var(--text-sm);">การแจ้งเตือน</strong>
+            <button class="btn btn-ghost btn-sm" id="mark-all-read-btn">อ่านทั้งหมด</button>
+          </div>
+          <p class="notif-empty">ไม่มีการแจ้งเตือน</p>
+        </div>
+      </div>
+
+      <!-- Profile -->
+      <div style="position: relative;">
+        <img
+          src="https://ui-avatars.com/api/?name=User&background=6366F1&color=fff&size=64"
+          alt="Profile"
+          class="member-avatar-btn"
+          id="user-avatar"
+          id="profile-trigger"
+        >
+        <div class="profile-dropdown" id="profile-dropdown">
+          <div style="padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-2);">
+            <div style="font-weight: 600; font-size: var(--text-sm);" id="dropdown-name">ผู้ใช้</div>
+            <div style="font-size: var(--text-xs); color: var(--text-tertiary);" id="dropdown-role">Member</div>
+          </div>
+          <a href="#" class="dropdown-item" id="profile-link">👤 โปรไฟล์</a>
+          <a href="#" class="dropdown-item" id="settings-link">⚙️ ตั้งค่า</a>
+          <div class="dropdown-divider"></div>
+          <a href="#" class="dropdown-item danger" id="member-logout-btn">🚪 ออกจากระบบ</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== CONTENT ===== -->
+  <main class="member-content">
+
+    <!-- ===== HOME SECTION ===== -->
+    <section class="member-section active" id="section-home">
+
+      <!-- Greeting -->
+      <div style="margin-bottom: var(--space-5);">
+        <p style="color: var(--text-tertiary); font-size: var(--text-sm);">สวัสดี 👋</p>
+        <h1 style="font-size: var(--text-2xl); font-weight: 800; letter-spacing: -0.03em;" id="user-name">กำลังโหลด...</h1>
+      </div>
+
+      <!-- Balance Hero -->
+      <div class="balance-hero slide-up">
+        <div class="balance-hero-label">ยอดสุทธิของฉัน</div>
+        <div class="balance-hero-amount" id="net-balance">฿0</div>
+        <div class="balance-hero-sub" id="balance-status">กำลังคำนวณ...</div>
+      </div>
+
+      <!-- Balance Cards -->
+      <div class="balance-cards stagger">
+        <div class="balance-card owed">
+          <div class="balance-card-icon">📥</div>
+          <div class="balance-card-label">คนอื่นติดเรา</div>
+          <div class="balance-card-amount" id="total-owed">฿0</div>
+        </div>
+        <div class="balance-card owing">
+          <div class="balance-card-icon">📤</div>
+          <div class="balance-card-label">เราติดคนอื่น</div>
+          <div class="balance-card-amount" id="total-owing">฿0</div>
+        </div>
+      </div>
+
+      <!-- Stats Strip -->
+      <div class="stats-strip stagger">
+        <div class="stat-strip-item">
+          <div class="stat-strip-value" id="monthly-expense">฿0</div>
+          <div class="stat-strip-label">เดือนนี้</div>
+        </div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-value" id="group-count">0</div>
+          <div class="stat-strip-label">กลุ่มของฉัน</div>
+        </div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-value" id="expense-count">0</div>
+          <div class="stat-strip-label">รายการ</div>
+        </div>
+      </div>
+
+      <!-- Recent Groups -->
+      <div class="member-section-header">
+        <h2 class="member-section-title">กลุ่มล่าสุด</h2>
+        <button class="btn btn-ghost btn-sm" id="view-all-groups-btn">ดูทั้งหมด</button>
+      </div>
+      <div class="groups-list" id="recent-groups">
+        <div class="empty-state"><div class="spinner"></div></div>
+      </div>
+
+      <!-- Recent Expenses -->
+      <div class="member-section-header" style="margin-top: var(--space-6);">
+        <h2 class="member-section-title">ค่าใช้จ่ายล่าสุด</h2>
+        <button class="btn btn-ghost btn-sm" id="view-all-expenses-btn">ดูทั้งหมด</button>
+      </div>
+      <div class="expenses-list" id="recent-expenses">
+        <div class="empty-state"><div class="spinner"></div></div>
+      </div>
+
+    </section>
+
+    <!-- ===== GROUPS SECTION ===== -->
+    <section class="member-section" id="section-groups">
+      <div class="member-section-header">
+        <h2 class="member-section-title">กลุ่มของฉัน</h2>
+        <button class="btn btn-primary btn-sm" id="create-group-btn">+ สร้างกลุ่ม</button>
+      </div>
+      <div class="groups-list" id="all-groups-list">
+        <div class="empty-state">
+          <span class="empty-icon">👥</span>
+          <p>ยังไม่มีกลุ่ม</p>
+          <button class="btn btn-primary" onclick="document.getElementById('create-group-modal').classList.add('active')">สร้างกลุ่มแรก</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== EXPENSES SECTION ===== -->
+    <section class="member-section" id="section-expenses">
+      <div class="member-section-header">
+        <h2 class="member-section-title">ค่าใช้จ่ายของฉัน</h2>
+      </div>
+
+      <!-- Filter -->
+      <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-4); overflow-x: auto; padding-bottom: var(--space-2);">
+        <button class="filter-btn active" data-cat="">ทั้งหมด</button>
+        <button class="filter-btn" data-cat="food">🍜 อาหาร</button>
+        <button class="filter-btn" data-cat="fuel">⛽ น้ำมัน</button>
+        <button class="filter-btn" data-cat="accommodation">🏨 ที่พัก</button>
+        <button class="filter-btn" data-cat="transport">🚌 เดินทาง</button>
+        <button class="filter-btn" data-cat="drinks">🥤 เครื่องดื่ม</button>
+        <button class="filter-btn" data-cat="other">📦 อื่นๆ</button>
+      </div>
+
+      <div class="expenses-list" id="all-expenses-list">
+        <div class="empty-state">
+          <span class="empty-icon">💸</span>
+          <p>ยังไม่มีค่าใช้จ่าย</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SETTLEMENT SECTION ===== -->
+    <section class="member-section" id="section-settle">
+      <div class="member-section-header">
+        <h2 class="member-section-title">การชำระหนี้</h2>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-5);">
+        <button class="filter-btn active" data-settle-tab="pending">รอชำระ</button>
+        <button class="filter-btn" data-settle-tab="history">ประวัติ</button>
+      </div>
+
+      <div class="settlement-list" id="settlement-list">
+        <div class="empty-state">
+          <span class="empty-icon">🤝</span>
+          <p>ไม่มีหนี้ที่รอชำระ</p>
+          <p style="font-size: var(--text-xs); color: var(--text-tertiary);">เยี่ยม! คุณไม่มีหนี้ค้างชำระ</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PROFILE SECTION ===== -->
+    <section class="member-section" id="section-profile">
+      <div style="text-align: center; padding: var(--space-8) 0;">
+        <div style="position: relative; display: inline-block; margin-bottom: var(--space-5);">
+          <img
+            src="https://ui-avatars.com/api/?name=User&background=6366F1&color=fff&size=200"
+            alt="Profile"
+            style="width: 96px; height: 96px; border-radius: 50%; border: 4px solid var(--primary); object-fit: cover;"
+            id="profile-avatar-big"
+          >
+          <button class="btn-icon" style="position: absolute; bottom: 0; right: 0; background: var(--primary); color: white;" id="change-avatar-btn">📷</button>
+        </div>
+        <h2 style="font-size: var(--text-xl); font-weight: 800; margin-bottom: 4px;" id="profile-name">กำลังโหลด...</h2>
+        <p style="color: var(--text-tertiary); font-size: var(--text-sm); margin-bottom: var(--space-6);" id="profile-email">...</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+        <div class="glass-card" style="padding: var(--space-5);">
+          <h3 style="font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-4);">แก้ไขโปรไฟล์</h3>
+          <form id="profile-form" style="display: flex; flex-direction: column; gap: var(--space-4);">
+            <div class="form-group">
+              <label class="form-label">ชื่อ</label>
+              <input type="text" class="form-input" id="profile-name-input" placeholder="ชื่อของคุณ">
+            </div>
+            <button type="submit" class="btn btn-primary">💾 บันทึก</button>
+          </form>
+        </div>
+
+        <div class="glass-card" style="padding: var(--space-5);">
+          <h3 style="font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-4);">เปลี่ยนรหัสผ่าน</h3>
+          <form id="password-form" style="display: flex; flex-direction: column; gap: var(--space-4);">
+            <div class="form-group">
+              <label class="form-label">รหัสผ่านใหม่</label>
+              <input type="password" class="form-input" placeholder="รหัสผ่านใหม่">
+            </div>
+            <div class="form-group">
+              <label class="form-label">ยืนยันรหัสผ่านใหม่</label>
+              <input type="password" class="form-input" placeholder="พิมพ์อีกครั้ง">
+            </div>
+            <button type="submit" class="btn btn-secondary">🔑 เปลี่ยนรหัสผ่าน</button>
+          </form>
+        </div>
+
+        <button class="btn btn-danger w-full" id="member-logout-btn-2">🚪 ออกจากระบบ</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="member-bottom-nav">
+    <button class="bottom-nav-item active" data-section="home">
+      <span class="bottom-nav-icon">🏠</span>
+      <span class="bottom-nav-label">หน้าหลัก</span>
+    </button>
+    <button class="bottom-nav-item" data-section="groups">
+      <span class="bottom-nav-icon">👥</span>
+      <span class="bottom-nav-label">กลุ่ม</span>
+    </button>
+    <button class="bottom-nav-item" data-section="expenses">
+      <span class="bottom-nav-icon">💸</span>
+      <span class="bottom-nav-label">รายจ่าย</span>
+    </button>
+    <button class="bottom-nav-item" data-section="settle">
+      <span class="bottom-nav-icon">✅</span>
+      <span class="bottom-nav-label">ชำระ</span>
+    </button>
+    <button class="bottom-nav-item" data-section="profile">
+      <span class="bottom-nav-icon">👤</span>
+      <span class="bottom-nav-label">โปรไฟล์</span>
+    </button>
+  </nav>
+</div>
+
+<!-- FAB - Add Expense -->
+<button class="fab" id="fab-add-expense" title="เพิ่มค่าใช้จ่าย">+</button>
+
+<!-- ===== CREATE GROUP MODAL ===== -->
+<div class="modal-overlay" id="create-group-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">สร้างกลุ่มใหม่ 👥</h3>
+      <button class="modal-close" onclick="document.getElementById('create-group-modal').classList.remove('active')">✕</button>
+    </div>
+    <form id="create-group-form" style="display: flex; flex-direction: column; gap: var(--space-5);">
+      <div class="form-group">
+        <label class="form-label">ชื่อกลุ่ม *</label>
+        <input type="text" id="group-name" class="form-input" placeholder="เช่น ทริปเที่ยวทะเล" required maxlength="50">
+      </div>
+      <div class="form-group">
+        <label class="form-label">คำอธิบาย</label>
+        <textarea id="group-desc" class="form-textarea" placeholder="รายละเอียดกลุ่ม (ไม่บังคับ)" rows="2"></textarea>
+      </div>
+      <div style="display: flex; gap: var(--space-3);">
+        <button type="button" class="btn btn-secondary" style="flex:1" onclick="document.getElementById('create-group-modal').classList.remove('active')">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary" style="flex:2">✨ สร้างกลุ่ม</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== ADD EXPENSE MODAL ===== -->
+<div class="modal-overlay" id="add-expense-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">เพิ่มค่าใช้จ่าย 💸</h3>
+      <button class="modal-close" onclick="document.getElementById('add-expense-modal').classList.remove('active')">✕</button>
+    </div>
+
+    <form id="add-expense-form" class="expense-form">
+      <!-- Group Select -->
+      <div class="form-group">
+        <label class="form-label">กลุ่ม *</label>
+        <select id="expense-group" class="form-select" required>
+          <option value="">เลือกกลุ่ม</option>
+        </select>
+      </div>
+
+      <!-- Title -->
+      <div class="form-group">
+        <label class="form-label">ชื่อรายการ *</label>
+        <input type="text" id="expense-title" class="form-input" placeholder="เช่น ค่าอาหารกลางวัน" required>
+      </div>
+
+      <!-- Category -->
+      <div class="form-group">
+        <label class="form-label">หมวดหมู่ *</label>
+        <div class="category-grid" id="category-grid">
+          <button type="button" class="category-btn selected" data-cat="food">
+            <span class="cat-icon">🍜</span>
+            <span>อาหาร</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="fuel">
+            <span class="cat-icon">⛽</span>
+            <span>น้ำมัน</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="accommodation">
+            <span class="cat-icon">🏨</span>
+            <span>ที่พัก</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="transport">
+            <span class="cat-icon">🚌</span>
+            <span>เดินทาง</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="drinks">
+            <span class="cat-icon">🥤</span>
+            <span>เครื่องดื่ม</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="entertainment">
+            <span class="cat-icon">🎭</span>
+            <span>บันเทิง</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="shopping">
+            <span class="cat-icon">🛍️</span>
+            <span>ช้อปปิ้ง</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="other">
+            <span class="cat-icon">📦</span>
+            <span>อื่นๆ</span>
+          </button>
+        </div>
+        <input type="hidden" id="expense-category" value="food">
+      </div>
+
+      <!-- Amount -->
+      <div class="form-group">
+        <label class="form-label">จำนวนเงิน (บาท) *</label>
+        <div class="form-input-icon">
+          <span class="input-icon" style="font-size: 0.875rem; color: var(--primary); font-weight: 700;">฿</span>
+          <input type="number" id="expense-amount" class="form-input" placeholder="0.00" min="0" step="0.01" required>
+        </div>
+      </div>
+
+      <!-- Paid By -->
+      <div class="form-group">
+        <label class="form-label">ผู้จ่าย *</label>
+        <select id="expense-paidby" class="form-select" required>
+          <option value="">เลือกผู้จ่าย</option>
+        </select>
+      </div>
+
+      <!-- Split Members -->
+      <div class="form-group">
+        <label class="form-label">หารกับ *</label>
+        <div class="member-selector" id="member-selector">
+          <p style="color: var(--text-tertiary); font-size: var(--text-sm);">เลือกกลุ่มก่อน</p>
+        </div>
+      </div>
+
+      <!-- Split Preview -->
+      <div class="split-preview" id="split-preview" style="display:none">
+        <div class="split-preview-title">สรุปการหาร</div>
+        <div id="split-preview-items"></div>
+      </div>
+
+      <!-- Date -->
+      <div class="form-group">
+        <label class="form-label">วันที่</label>
+        <input type="date" id="expense-date" class="form-input">
+      </div>
+
+      <!-- Note -->
+      <div class="form-group">
+        <label class="form-label">หมายเหตุ</label>
+        <textarea id="expense-note" class="form-textarea" placeholder="หมายเหตุ (ไม่บังคับ)" rows="2"></textarea>
+      </div>
+
+      <!-- Receipt -->
+      <div class="form-group">
+        <label class="form-label">รูปใบเสร็จ</label>
+        <input type="file" id="expense-receipt" accept="image/*" style="display:none">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('expense-receipt').click()">
+          📷 แนบใบเสร็จ
+        </button>
+        <div id="receipt-preview" style="display:none; margin-top: var(--space-2);">
+          <img id="receipt-img" src="" alt="Receipt" style="max-height: 120px; border-radius: var(--radius-md); object-fit: cover;">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: var(--space-3); padding-top: var(--space-2);">
+        <button type="button" class="btn btn-secondary" style="flex:1" onclick="document.getElementById('add-expense-modal').classList.remove('active')">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary" style="flex:2" id="add-expense-submit">
+          💸 เพิ่มค่าใช้จ่าย
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+  // Theme
+  const theme = localStorage.getItem('sharepay-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('theme-toggle').textContent = theme === 'dark' ? '🌙' : '☀️';
+
+  // Bottom Nav
+  document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.member-section').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active');
+      const section = document.getElementById('section-' + btn.dataset.section);
+      if (section) { section.classList.add('active'); window.scrollTo(0, 0); }
+    });
+  });
+
+  // FAB → Add Expense
+  document.getElementById('fab-add-expense').addEventListener('click', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('expense-date').value = today;
+    document.getElementById('add-expense-modal').classList.add('active');
+  });
+
+  // Notification Bell
+  document.getElementById('notif-toggle').addEventListener('click', () => {
+    document.getElementById('notif-bell').classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#notif-bell')) document.getElementById('notif-bell').classList.remove('open');
+  });
+
+  // Profile Dropdown
+  document.getElementById('user-avatar').addEventListener('click', () => {
+    document.getElementById('profile-dropdown').classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#user-avatar') && !e.target.closest('#profile-dropdown')) {
+      document.getElementById('profile-dropdown').classList.remove('open');
+    }
+  });
+
+  // Category buttons
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById('expense-category').value = btn.dataset.cat;
+    });
+  });
+
+  // Receipt preview
+  document.getElementById('expense-receipt').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      document.getElementById('receipt-img').src = ev.target.result;
+      document.getElementById('receipt-preview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // View all links
+  document.getElementById('view-all-groups-btn').addEventListener('click', () => {
+    document.querySelector('[data-section="groups"]').click();
+  });
+  document.getElementById('view-all-expenses-btn').addEventListener('click', () => {
+    document.querySelector('[data-section="expenses"]').click();
+  });
+  document.getElementById('create-group-btn')?.addEventListener('click', () => {
+    document.getElementById('create-group-modal').classList.add('active');
+  });
+
+  // Logout buttons
+  ['member-logout-btn', 'member-logout-btn-2'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', async () => {
+      const { logoutUser } = await import('js/auth.js');
+      logoutUser();
+    });
+  });
+
+  // Toast global
+  window.SharePay = {
+    showToast(message, type = 'info') {
+      const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `<span>${icons[type]}</span> ${message}`;
+      document.getElementById('toast-container').appendChild(toast);
+      setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 3500);
+    }
+  };
+
+  // Theme toggle
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('sharepay-theme', next);
+    document.getElementById('theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
+  });
+
+  // Settings & Profile links
+  document.getElementById('settings-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = './pages/settings.html';
+  });
+  document.getElementById('profile-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = './pages/settings.html#profile';
+  });
+
+  // Filter buttons
+  document.querySelectorAll('[data-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-cat]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Settlement tabs
+  document.querySelectorAll('[data-settle-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-settle-tab]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+</script>
+
+<script src="./js/config.js"></script>
+<script src="./js/storage.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/ui.js"></script>
+<script src="./js/member.js"></script>
+</body>
+</html>
