@@ -8,16 +8,22 @@ document.addEventListener('DOMContentLoaded', () => {
   currentUser = window.Auth.guard('admin');
   if (!currentUser) return;
 
-  SharePay.initTheme();
-  SharePay.populateNavUser(currentUser);
-  initDashboard();
-  initNavigation();
-  bindLogout();
-  bindSearch();
-  initReports();
-  renderUsersTable();
-  renderGroupsTable();
-  renderExpensesTable();
+  try {
+    SharePay.initTheme();
+    SharePay.populateNavUser(currentUser);
+    initDashboard();
+    initNavigation();
+    bindLogout();
+    bindSearch();
+    initReports();
+    renderUsersTable();
+    renderGroupsTable();
+    renderExpensesTable();
+  } finally {
+    // Hide the full-screen page loader once the dashboard is ready
+    const loader = document.getElementById('page-loader');
+    if (loader) loader.style.display = 'none';
+  }
 });
 
 // ===== DASHBOARD =====
