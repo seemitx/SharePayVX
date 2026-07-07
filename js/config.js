@@ -6,7 +6,7 @@
  * STEP 3: Save and reload the page
  */
 
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzm2oYJvn7qmm9wejmW0xno2eCER1eJ-POanEyw5J01OH6hFxDQ2fqrkOqwpgV-lpY/exec";
+const GOOGLE_APPS_SCRIPT_URL = "abc";
 // Example: "https://script.google.com/macros/s/AKfycb.../exec"
 
 const SHEET_NAMES = {
