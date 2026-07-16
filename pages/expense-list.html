@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Expenses – SharePay</title>
-  <link rel="icon" href="assets/logo/logo.svg" type="image/svg+xml" />
+  <link rel="icon" href="../assets/logo/logo.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="stylesheet" href="../css/member.css" />
   <link rel="stylesheet" href="../css/responsive.css" />
@@ -159,11 +159,11 @@
   <!-- Navbar -->
   <nav class="navbar" id="navbar">
     <div class="nav-brand">
-      <img src="assets/logo/logo.svg" alt="SharePay" class="nav-logo" />
+      <img src="../assets/logo/logo.svg" alt="SharePay" class="nav-logo" />
       <span class="nav-title">SharePay</span>
     </div>
     <div class="nav-links">
-      <a href="member.html" class="nav-link">Dashboard</a>
+      <a href="../member.html" class="nav-link">Dashboard</a>
       <a href="expense-list.html" class="nav-link active">Expenses</a>
       <a href="settlement.html" class="nav-link">Settlement</a>
       <a href="settings.html" class="nav-link">Settings</a>
@@ -182,7 +182,7 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
           Export
         </button>
-        <a href="member.html#add-expense" class="btn btn-primary">
+        <a href="../member.html#add-expense" class="btn btn-primary">
           + Add Expense
         </a>
       </div>
@@ -232,7 +232,7 @@
     <div class="empty-state" id="emptyState" style="display:none;">
       <div class="empty-icon">💸</div>
       <p>No expenses found.</p>
-      <a href="member.html#add-expense" class="btn btn-primary">Add First Expense</a>
+      <a href="../member.html#add-expense" class="btn btn-primary">Add First Expense</a>
     </div>
     <div class="pagination" id="pagination"></div>
   </main>
@@ -247,7 +247,6 @@
     </div>
   </div>
 
-  <script src="../js/app.js"></script>
   <script>
   document.addEventListener('DOMContentLoaded', () => {
     const user = window.Auth?.current();
