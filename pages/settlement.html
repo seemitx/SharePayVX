@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Settlements – SharePay</title>
-  <link rel="icon" href="assets/logo/logo.svg" type="image/svg+xml" />
+  <link rel="icon" href="../assets/logo/logo.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="stylesheet" href="../css/member.css" />
   <link rel="stylesheet" href="../css/responsive.css" />
@@ -247,27 +247,27 @@
     .empty-state .big { font-size: 1.05rem; font-weight: 600; color: var(--text-primary); }
   </style>
 </head>
-<body>
+<body class="has-sidebar">
 
 <!-- ════════════════════  SIDEBAR NAV  ════════════════════ -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
-    <a href="index.html">
-      <img src="assets/logo/logo.svg" alt="SharePay" height="36" />
+    <a href="../index.html">
+      <img src="../assets/logo/logo.svg" alt="SharePay" height="36" />
     </a>
     <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">✕</button>
   </div>
 
   <nav class="sidebar-nav">
-    <a href="index.html"         class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
-    <a href="member.html"        class="nav-item"><span class="nav-icon">👥</span> Groups</a>
+    <a href="../index.html"         class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a href="../member.html"        class="nav-item"><span class="nav-icon">👥</span> Groups</a>
     <a href="expense-list.html"  class="nav-item"><span class="nav-icon">💸</span> Expenses</a>
     <a href="settlement.html"    class="nav-item active"><span class="nav-icon">🤝</span> Settlements</a>
     <a href="settings.html"      class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
   </nav>
 
   <div class="sidebar-footer">
-    <a href="login.html" class="nav-item" id="logoutBtn"><span class="nav-icon">🚪</span> Logout</a>
+    <a href="../login.html" class="nav-item" id="logoutBtn"><span class="nav-icon">🚪</span> Logout</a>
   </div>
 </aside>
 
@@ -382,9 +382,6 @@
 </div>
 
 <!-- ════════════════════  SCRIPTS  ════════════════════ -->
-<script src="../js/app.js"></script>
-<script src="../js/auth.js"></script>
-<script src="../js/notifications.js"></script>
 <script>
   // ── Sidebar toggle ──
   const sidebar   = document.getElementById('sidebar');
