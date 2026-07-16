@@ -517,9 +517,9 @@
 
   // Logout buttons
   ['member-logout-btn', 'member-logout-btn-2'].forEach(id => {
-    document.getElementById(id)?.addEventListener('click', async () => {
-      const { logoutUser } = await import('js/auth.js');
-      logoutUser();
+    document.getElementById(id)?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.Auth.logout();
     });
   });
 
