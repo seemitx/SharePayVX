@@ -458,9 +458,7 @@
 
   // FAB → Add Expense
   document.getElementById('fab-add-expense').addEventListener('click', () => {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('expense-date').value = today;
-    document.getElementById('add-expense-modal').classList.add('active');
+    window.openAddExpense();
   });
 
   // Notification Bell
@@ -575,6 +573,7 @@
 <script src="js/storage.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/discord.js"></script>
 <script src="js/member.js"></script>
 </body>
 </html>
