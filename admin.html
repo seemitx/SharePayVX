@@ -22,7 +22,7 @@
       <circle cx="24" cy="10" r="2" fill="white"/>
       <defs>
         <linearGradient id="grad-loader" x1="0" y1="0" x2="32" y2="32">
-          <stop stop-color="#6366F1"/><stop offset="1" stop-color="#8B5CF6"/>
+          <stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#22D3EE"/>
         </linearGradient>
       </defs>
     </svg>
@@ -45,7 +45,7 @@
           <circle cx="24" cy="10" r="2" fill="white"/>
           <defs>
             <linearGradient id="grad-sb" x1="0" y1="0" x2="32" y2="32">
-              <stop stop-color="#6366F1"/><stop offset="1" stop-color="#8B5CF6"/>
+              <stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#22D3EE"/>
             </linearGradient>
           </defs>
         </svg>
@@ -98,7 +98,7 @@
 
     <div class="sidebar-footer">
       <div class="sidebar-user" id="sidebar-user">
-        <img src="https://ui-avatars.com/api/?name=Admin&background=6366F1&color=fff" alt="Admin" class="sidebar-avatar" id="sidebar-avatar">
+        <img src="https://ui-avatars.com/api/?name=Admin&background=0EA5E9&color=fff" alt="Admin" class="sidebar-avatar" id="sidebar-avatar">
         <div class="sidebar-user-info">
           <div class="sidebar-user-name" id="sidebar-name">Admin</div>
           <div class="sidebar-user-role">Administrator</div>
@@ -534,19 +534,6 @@
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-  // Toast global
-  window.SharePay = {
-    showToast(message, type = 'info') {
-      const container = document.getElementById('toast-container');
-      const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-      const toast = document.createElement('div');
-      toast.className = `toast toast-${type}`;
-      toast.innerHTML = `<span>${icons[type]}</span> ${message}`;
-      container.appendChild(toast);
-      setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 3500);
-    }
-  };
-
   // Sidebar toggle
   const sidebar = document.getElementById('admin-sidebar');
   const sidebarBackdrop = document.getElementById('sidebar-backdrop');
@@ -619,19 +606,6 @@
     if (!e.target.closest('#notif-bell')) {
       document.getElementById('notif-bell').classList.remove('open');
     }
-  });
-
-  // Dark mode
-  const theme = localStorage.getItem('sharepay-theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', theme);
-  const dmBtn = document.getElementById('dark-mode-toggle');
-  dmBtn.textContent = theme === 'dark' ? '🌙' : '☀️';
-  dmBtn.addEventListener('click', () => {
-    const current = document.documentElement.getAttribute('data-theme');
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('sharepay-theme', next);
-    dmBtn.textContent = next === 'dark' ? '🌙' : '☀️';
   });
 
   // Report filter buttons
