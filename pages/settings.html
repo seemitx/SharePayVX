@@ -268,7 +268,7 @@
   </nav>
 
   <div class="sidebar-footer">
-    <a href="../login.html" class="nav-item" id="logoutBtn"><span class="nav-icon">🚪</span> Logout</a>
+    <a href="../login.html" class="nav-item" id="logoutBtn" onclick="event.preventDefault(); window.Auth.logout();"><span class="nav-icon">🚪</span> Logout</a>
   </div>
 </aside>
 
@@ -565,27 +565,31 @@
 
   // ── Profile ──
   function loadProfileData() {
-    const cfg = window.SharePayConfig;
-    const user = cfg?.auth?.currentUser;
+    const user = window.Auth.current();
     if (user) {
-      document.getElementById('displayName').value = user.displayName || '';
+      document.getElementById('displayName').value = user.name || '';
       document.getElementById('emailField').value  = user.email || '';
       const preview = document.getElementById('avatarPreview');
-      const initials = (user.displayName || 'U')[0].toUpperCase();
+      const initials = (user.name || 'U')[0].toUpperCase();
       preview.setAttribute('data-init', initials);
-      if (!preview.querySelector('img')) preview.textContent = initials;
+      if (user.avatar) {
+        preview.innerHTML = `<img src="${user.avatar}" alt="avatar" />`;
+      } else if (!preview.querySelector('img')) {
+        preview.textContent = initials;
+      }
     }
   }
-  async function saveProfile() {
+  function saveProfile() {
     const name = document.getElementById('displayName').value.trim();
     if (!name) { showToast('⚠️ กรุณากรอกชื่อ'); return; }
-    const cfg  = window.SharePayConfig;
-    const user = cfg?.auth?.currentUser;
+    const user = window.Auth.current();
     if (!user) { showToast('⚠️ กรุณาเข้าสู่ระบบก่อน'); return; }
-    // updateProfile removed (no Firebase)
-    // firestore removed (no Firebase)
-    await updateProfile(user, { displayName: name });
-    await updateDoc(doc(cfg.db, cfg.collections.users, user.uid), { name, updatedAt: new Date().toISOString() });
+    const imgEl = document.getElementById('avatarPreview').querySelector('img');
+    const updated = window.SP.Members.update(user.id, { name, ...(imgEl ? { avatar: imgEl.src } : {}) });
+    if (updated) {
+      const { password, ...safe } = updated;
+      window.Auth.setSession(safe);
+    }
     showToast('✅ บันทึกข้อมูลโปรไฟล์สำเร็จ!');
   }
 
@@ -624,18 +628,17 @@
 
   // ── Security ──
   function changePassword() {
+    const cp = document.getElementById('currentPass').value;
     const np = document.getElementById('newPass').value;
-    const cp = document.getElementById('confirmPass').value;
-    if (np !== cp)       { showToast('⚠️ Passwords do not match'); return; }
-    if (np.length < 8)   { showToast('⚠️ Password too short'); return; }
-    const cfg2 = window.SharePayConfig;
-    if (cfg2?.auth?.currentUser) {
-      Promise.resolve().then(() => { // Firebase removed
-        return updatePassword(cfg2.auth.currentUser, np);
-      }).then(() => showToast('✅ เปลี่ยนรหัสผ่านสำเร็จ!')).catch(err => showToast('⚠️ ' + err.message));
-    } else {
-      showToast('⚠️ กรุณาเข้าสู่ระบบก่อน');
-    }
+    const cf = document.getElementById('confirmPass').value;
+    if (np !== cf)      { showToast('⚠️ Passwords do not match'); return; }
+    if (np.length < 8)  { showToast('⚠️ Password too short'); return; }
+    const user = window.Auth.current();
+    if (!user) { showToast('⚠️ กรุณาเข้าสู่ระบบก่อน'); return; }
+    const full = window.SP.Members.getById(user.id);
+    if (full && full.password !== cp) { showToast('⚠️ รหัสผ่านปัจจุบันไม่ถูกต้อง'); return; }
+    window.SP.Members.update(user.id, { password: np });
+    showToast('✅ เปลี่ยนรหัสผ่านสำเร็จ!');
     ['currentPass','newPass','confirmPass'].forEach(id => document.getElementById(id).value = '');
   }
 
@@ -646,18 +649,18 @@
   function exportData()         { showToast('📦 Export started — check your email'); }
   function clearNotifications() { showToast('🔕 Notifications cleared'); }
   function deleteAccount() {
-    const cfg3 = window.SharePayConfig;
-    const u = cfg3?.auth?.currentUser;
-    if (u) {
-      Promise.resolve().then(() => { // Firebase removed
-        return deleteUser(u);
-      }).then(() => { window.location.href = '../register.html'; })
-        .catch(err => showToast('⚠️ ' + err.message + ' (อาจต้อง re-authenticate ก่อน)'));
+    const user = window.Auth.current();
+    if (user) {
+      window.SP.Members.delete(user.id);
+      window.Auth.clearSession();
+      window.location.href = '../register.html';
     }
   }
 
   // ── Init ──
   document.addEventListener('DOMContentLoaded', () => {
+    if (!window.Auth.guard()) return;
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('sharepay-theme') || 'dark');
     loadProfileData();
     // Restore saved prefs
     const dp = JSON.parse(localStorage.getItem('sp_display_prefs') || '{}');
