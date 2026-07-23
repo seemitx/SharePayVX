@@ -7,10 +7,10 @@
 /* ===== CSS Custom Properties ===== */
 :root {
   /* Brand Colors */
-  --primary: #6366F1;
-  --primary-hover: #4F46E5;
-  --primary-light: rgba(99, 102, 241, 0.15);
-  --secondary: #8B5CF6;
+  --primary: #0EA5E9;
+  --primary-hover: #0284C7;
+  --primary-light: rgba(14, 165, 233, 0.15);
+  --secondary: #22D3EE;
   --accent: #06B6D4;
   --accent-green: #10B981;
   --accent-orange: #F59E0B;
@@ -18,9 +18,9 @@
   --accent-pink: #EC4899;
 
   /* Gradient */
-  --gradient-primary: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #06B6D4 100%);
-  --gradient-card: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%);
-  --gradient-hero: linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #0F172A 100%);
+  --gradient-primary: linear-gradient(135deg, #0EA5E9 0%, #06B6D4 50%, #22D3EE 100%);
+  --gradient-card: linear-gradient(135deg, rgba(14,165,233,0.1) 0%, rgba(6,182,212,0.05) 100%);
+  --gradient-hero: linear-gradient(135deg, #0F172A 0%, #0C4A6E 50%, #0F172A 100%);
 
   /* Typography */
   --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
@@ -65,7 +65,7 @@
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.4);
   --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.3);
+  --shadow-glow: 0 0 30px rgba(14, 165, 233, 0.3);
   --shadow-glow-accent: 0 0 30px rgba(6, 182, 212, 0.2);
 
   /* Transitions */
@@ -105,7 +105,7 @@
 
   --input-bg: rgba(255, 255, 255, 0.06);
   --input-border: rgba(255, 255, 255, 0.12);
-  --input-focus: rgba(99, 102, 241, 0.3);
+  --input-focus: rgba(14, 165, 233, 0.3);
 }
 
 /* ===== Light Theme ===== */
@@ -130,7 +130,7 @@
 
   --input-bg: rgba(0, 0, 0, 0.04);
   --input-border: rgba(0, 0, 0, 0.1);
-  --input-focus: rgba(99, 102, 241, 0.15);
+  --input-focus: rgba(14, 165, 233, 0.15);
 
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
@@ -483,9 +483,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .badge-admin {
-  background: rgba(99, 102, 241, 0.15);
+  background: rgba(14, 165, 233, 0.15);
   color: var(--primary);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(14, 165, 233, 0.3);
 }
 
 .badge-member {
