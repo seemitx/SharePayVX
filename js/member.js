@@ -324,6 +324,8 @@ window.openGroupDetail = function(id) {
 window.recordSettlement = function(groupId, fromId, fromName, toId, toName, amount) {
   window.SP.Settlements.create({ groupId, fromId, fromName, toId, toName, amount, status: 'confirmed', confirmedAt: new Date().toISOString() });
   window.SP.Notifications.create({ memberId: toId, type: 'payment_received', message: `${fromName} ชำระเงิน ${SharePay.formatCurrency(amount)} แล้ว ✅` });
+  const settledGroup = window.SP.Groups.getById(groupId);
+  window.Discord?.notifySettlement({ groupName: settledGroup?.name, fromName, toName, amount });
   SharePay.showToast('บันทึกการชำระเงินเรียบร้อย ✅', 'success');
   document.getElementById('group-detail-modal').classList.remove('active');
   initDashboard();
@@ -408,6 +410,7 @@ function initGroupForm() {
 
     const group = window.SP.Groups.create({ name, icon, memberIds: [currentUser.id], createdBy: currentUser.id });
     window.SP.Members.update(currentUser.id, {}); // trigger save
+    window.Discord?.notifyNewGroup({ groupName: name, groupIcon: icon, creatorName: currentUser.name, memberCount: 1 });
     SharePay.showToast(`สร้างกลุ่ม "${name}" เรียบร้อยแล้ว! 🎉`, 'success');
     form.reset();
     document.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('selected'));
@@ -429,87 +432,139 @@ function initGroupForm() {
 // ===== ADD EXPENSE =====
 window.openAddExpense = function(groupId) {
   document.getElementById('group-detail-modal')?.classList.remove('active');
-  let modal = document.getElementById('add-expense-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'add-expense-modal';
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `<div class="modal glass" style="max-width:500px;width:95vw;">
-      <div class="modal-header"><h3>เพิ่มค่าใช้จ่าย</h3><button class="btn-icon" onclick="document.getElementById('add-expense-modal').classList.remove('active')">✕</button></div>
-      <form id="add-expense-form" style="padding:1.5rem;display:flex;flex-direction:column;gap:1rem;">
-        <input type="hidden" id="ae-group-id">
-        <div class="form-group"><label class="form-label">ชื่อรายการ *</label><input class="form-input" id="ae-title" placeholder="เช่น ค่าข้าวเที่ยง" required></div>
-        <div class="form-group"><label class="form-label">จำนวนเงิน (฿) *</label><input class="form-input" id="ae-amount" type="number" min="0.01" step="0.01" placeholder="0.00" required></div>
-        <div class="form-group"><label class="form-label">หมวดหมู่</label>
-          <select class="form-input" id="ae-cat">
-            ${Object.entries(EXPENSE_CATEGORIES).map(([k,v]) => `<option value="${k}">${v.icon} ${v.label}</option>`).join('')}
-          </select></div>
-        <div class="form-group"><label class="form-label">หมายเหตุ</label><input class="form-input" id="ae-note" placeholder="(ไม่บังคับ)"></div>
-        <div class="form-group"><label class="form-label">สมาชิกที่หาร</label><div id="ae-members" class="checkbox-group"></div></div>
-        <button type="submit" class="btn btn-primary">บันทึกค่าใช้จ่าย</button>
-      </form>
-    </div>`;
-    document.body.appendChild(modal);
-    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('active'); });
-    document.getElementById('add-expense-form').addEventListener('submit', submitExpense);
-  }
+  const modal = document.getElementById('add-expense-modal');
+  if (!modal) return;
 
-  document.getElementById('ae-group-id').value = groupId;
-  const group = window.SP.Groups.getById(groupId);
-  const members = (group?.memberIds || []).map(id => window.SP.Members.getById(id)).filter(Boolean);
-  const membersDiv = document.getElementById('ae-members');
-  membersDiv.innerHTML = members.map(m => `
-    <label class="checkbox-label">
-      <input type="checkbox" name="ae-member" value="${m.id}" data-name="${m.name}" ${m.id === currentUser.id ? 'checked' : ''}> ${m.name}
-    </label>`).join('');
+  const form = document.getElementById('add-expense-form');
+  form.reset();
+  document.getElementById('receipt-preview').style.display = 'none';
+  document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector('.category-btn[data-cat="food"]')?.classList.add('selected');
+  document.getElementById('expense-category').value = 'food';
+  document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+
+  // Populate group dropdown with the current user's groups
+  const groups = window.SP.Groups.getByMember(currentUser.id);
+  const groupSelect = document.getElementById('expense-group');
+  groupSelect.innerHTML = '<option value="">เลือกกลุ่ม</option>' +
+    groups.map(g => `<option value="${g.id}">${g.icon || '👥'} ${g.name}</option>`).join('');
+  groupSelect.value = groupId || (groups[0]?.id ?? '');
+
+  populateExpenseGroupDependentFields();
   modal.classList.add('active');
 };
 
+// Fill "ผู้จ่าย" (paid by) select and "หารกับ" (split with) checkboxes based on the selected group
+function populateExpenseGroupDependentFields() {
+  const groupId = document.getElementById('expense-group').value;
+  const paidBySelect   = document.getElementById('expense-paidby');
+  const memberSelector = document.getElementById('member-selector');
+  const group = groupId ? window.SP.Groups.getById(groupId) : null;
+  const members = (group?.memberIds || []).map(id => window.SP.Members.getById(id)).filter(Boolean);
+
+  if (!group || members.length === 0) {
+    paidBySelect.innerHTML = '<option value="">เลือกผู้จ่าย</option>';
+    memberSelector.innerHTML = '<p style="color: var(--text-tertiary); font-size: var(--text-sm);">เลือกกลุ่มก่อน</p>';
+    updateSplitPreview();
+    return;
+  }
+
+  paidBySelect.innerHTML = members.map(m =>
+    `<option value="${m.id}" ${m.id === currentUser.id ? 'selected' : ''}>${m.name}</option>`).join('');
+
+  memberSelector.innerHTML = members.map(m => `
+    <label class="member-checkbox-item">
+      <input type="checkbox" name="ae-member" value="${m.id}" data-name="${m.name}" ${m.id === currentUser.id ? 'checked' : ''}>
+      <img class="member-checkbox-avatar" src="${m.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=3B82F6&color=fff`}" alt="${m.name}">
+      <span class="member-checkbox-name">${m.name}</span>
+    </label>`).join('');
+
+  memberSelector.querySelectorAll('input[name="ae-member"]').forEach(cb => {
+    cb.addEventListener('change', updateSplitPreview);
+  });
+
+  updateSplitPreview();
+}
+
+// Live-update the "สรุปการหาร" (split summary) preview
+function updateSplitPreview() {
+  const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+  const checked = [...document.querySelectorAll('[name="ae-member"]:checked')];
+  const preview = document.getElementById('split-preview');
+  const items = document.getElementById('split-preview-items');
+
+  if (checked.length === 0 || amount <= 0) {
+    preview.style.display = 'none';
+    return;
+  }
+
+  const splitAmount = amount / checked.length;
+  items.innerHTML = checked.map(c => `
+    <div class="split-item">
+      <span class="split-item-name">${c.dataset.name}</span>
+      <span class="split-item-amount">${SharePay.formatCurrency(splitAmount)}</span>
+    </div>`).join('');
+  preview.style.display = 'block';
+}
+
 function submitExpense(e) {
   e.preventDefault();
-  const groupId   = document.getElementById('ae-group-id').value;
-  const title     = document.getElementById('ae-title').value.trim();
-  const amount    = parseFloat(document.getElementById('ae-amount').value);
-  const category  = document.getElementById('ae-cat').value;
-  const note      = document.getElementById('ae-note').value.trim();
+  const groupId   = document.getElementById('expense-group').value;
+  const title     = document.getElementById('expense-title').value.trim();
+  const amount    = parseFloat(document.getElementById('expense-amount').value);
+  const category  = document.getElementById('expense-category').value;
+  const paidById  = document.getElementById('expense-paidby').value;
+  const note      = document.getElementById('expense-note').value.trim();
+  const date      = document.getElementById('expense-date').value;
   const checked   = [...document.querySelectorAll('[name="ae-member"]:checked')];
 
+  if (!groupId) { SharePay.showToast('กรุณาเลือกกลุ่ม', 'error'); return; }
   if (!title || !amount || amount <= 0) { SharePay.showToast('กรุณากรอกข้อมูลให้ครบ', 'error'); return; }
+  if (!paidById) { SharePay.showToast('กรุณาเลือกผู้จ่าย', 'error'); return; }
   if (checked.length === 0) { SharePay.showToast('เลือกสมาชิกอย่างน้อย 1 คน', 'error'); return; }
 
+  const paidByMember     = window.SP.Members.getById(paidById);
+  const group            = window.SP.Groups.getById(groupId);
+  const catInfo           = EXPENSE_CATEGORIES[category] || EXPENSE_CATEGORIES.other;
   const splitMemberIds   = checked.map(c => c.value);
   const splitMemberNames = checked.map(c => c.dataset.name);
   const splitAmount      = amount / splitMemberIds.length;
 
-  window.SP.Expenses.create({
-    groupId, title, category, amount, note,
-    paidById: currentUser.id, paidByName: currentUser.name,
+  const expense = window.SP.Expenses.create({
+    groupId, title, category, amount, note, date,
+    paidById, paidByName: paidByMember?.name || currentUser.name,
     splitMemberIds, splitMemberNames, splitAmount,
     createdBy: currentUser.id
   });
 
+  window.Discord?.notifyNewExpense({
+    groupName: group?.name || '-', groupIcon: group?.icon,
+    title, categoryLabel: catInfo.label, categoryIcon: catInfo.icon,
+    amount, paidByName: paidByMember?.name || currentUser.name,
+    splitMemberNames, splitAmount, note, date
+  });
+
   // Notify other members
   splitMemberIds.forEach(mid => {
-    if (mid !== currentUser.id) {
-      window.SP.Notifications.create({ memberId: mid, type: 'new_expense', message: `${currentUser.name} เพิ่มค่าใช้จ่าย "${title}" คุณต้องจ่าย ${SharePay.formatCurrency(splitAmount)}` });
+    if (mid !== paidById) {
+      window.SP.Notifications.create({ memberId: mid, type: 'new_expense', message: `${paidByMember?.name || currentUser.name} เพิ่มค่าใช้จ่าย "${title}" คุณต้องจ่าย ${SharePay.formatCurrency(splitAmount)}` });
     }
   });
 
   SharePay.showToast('บันทึกค่าใช้จ่ายเรียบร้อย! 💸', 'success');
   document.getElementById('add-expense-modal').classList.remove('active');
   document.getElementById('add-expense-form').reset();
+  document.getElementById('split-preview').style.display = 'none';
   initDashboard();
   renderExpensesSection();
 }
 
 function initExpenseForm() {
-  const addBtn = document.getElementById('add-expense-btn') || document.querySelector('[data-action="add-expense"]');
-  if (!addBtn) return;
-  addBtn.addEventListener('click', () => {
-    const groups = window.SP.Groups.getByMember(currentUser.id);
-    if (groups.length === 0) { SharePay.showToast('สร้างกลุ่มก่อนเพิ่มค่าใช้จ่าย', 'warning'); return; }
-    openAddExpense(groups[0].id);
-  });
+  const form = document.getElementById('add-expense-form');
+  if (!form) return;
+  form.addEventListener('submit', submitExpense);
+  document.getElementById('expense-group')?.addEventListener('change', populateExpenseGroupDependentFields);
+  document.getElementById('expense-amount')?.addEventListener('input', updateSplitPreview);
 }
 
 function bindLogout() {
