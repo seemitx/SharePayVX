@@ -280,7 +280,7 @@
 
 .expense-item:hover {
   background: var(--primary-light);
-  border-color: rgba(99, 102, 241, 0.2);
+  border-color: rgba(14, 165, 233, 0.2);
 }
 
 .expense-icon {
@@ -470,7 +470,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.6);
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.6);
   cursor: pointer;
   transition: all var(--transition-spring);
   border: none;
@@ -479,7 +479,7 @@
 
 .fab:hover {
   transform: scale(1.1);
-  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.8);
+  box-shadow: 0 8px 30px rgba(14, 165, 233, 0.8);
 }
 
 .fab:active { transform: scale(0.95); }
@@ -566,7 +566,7 @@
 /* ===== Split Preview ===== */
 .split-preview {
   background: var(--primary-light);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(14, 165, 233, 0.2);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
 }
@@ -586,7 +586,7 @@
   align-items: center;
   padding: var(--space-2) 0;
   font-size: var(--text-sm);
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+  border-bottom: 1px solid rgba(14, 165, 233, 0.1);
 }
 
 .split-item:last-child { border-bottom: none; }
