@@ -6,7 +6,7 @@
 const EXPENSE_CATEGORIES = {
   food:          { label: 'ค่าอาหาร',       icon: '🍜', color: '#F59E0B' },
   fuel:          { label: 'ค่าน้ำมัน',      icon: '⛽', color: '#EF4444' },
-  accommodation: { label: 'ค่าที่พัก',      icon: '🏨', color: '#8B5CF6' },
+  accommodation: { label: 'ค่าที่พัก',      icon: '🏨', color: '#22D3EE' },
   transport:     { label: 'ค่าเดินทาง',     icon: '🚌', color: '#06B6D4' },
   drinks:        { label: 'ค่าเครื่องดื่ม', icon: '🥤', color: '#10B981' },
   entertainment: { label: 'ความบันเทิง',    icon: '🎭', color: '#F97316' },
@@ -174,20 +174,20 @@ function initNavigation() {
 }
 
 function showSection(name) {
-  document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.member-section').forEach(s => s.classList.remove('active'));
   const target = document.getElementById(`section-${name}`);
   if (target) {
     target.classList.add('active');
-    if (name === 'expenses')    renderExpensesSection();
-    if (name === 'groups')      renderGroupsSection();
-    if (name === 'settlements') renderSettlementsSection();
-    if (name === 'notifications') renderNotificationsSection();
+    window.scrollTo(0, 0);
+    if (name === 'expenses') renderExpensesSection();
+    if (name === 'groups')   renderGroupsSection();
+    if (name === 'settle')   renderSettlementsSection();
   }
 }
 
 // ===== EXPENSES SECTION =====
 function renderExpensesSection() {
-  const container = document.getElementById('expenses-list');
+  const container = document.getElementById('all-expenses-list');
   if (!container) return;
   const expenses = window.SP.Expenses.getByMember(currentUser.id);
 
@@ -228,7 +228,7 @@ window.deleteExpense = function(id) {
 
 // ===== GROUPS SECTION =====
 function renderGroupsSection() {
-  const container = document.getElementById('groups-list');
+  const container = document.getElementById('all-groups-list');
   if (!container) return;
   const groups = window.SP.Groups.getByMember(currentUser.id);
 
@@ -343,7 +343,7 @@ window.deleteGroup = function(id) {
 
 // ===== SETTLEMENTS SECTION =====
 function renderSettlementsSection() {
-  const container = document.getElementById('settlements-list');
+  const container = document.getElementById('settlement-list');
   if (!container) return;
   const settlements = window.SP.Settlements.getByMember(currentUser.id);
 
@@ -370,23 +370,21 @@ function renderSettlementsSection() {
 }
 
 // ===== NOTIFICATIONS =====
-function renderNotificationsSection() {
-  const container = document.getElementById('notifications-list');
+function renderNotifDropdown() {
+  const container = document.getElementById('notif-items');
   if (!container) return;
   const notifs = window.SP.Notifications.getByMember(currentUser.id);
-  window.SP.Notifications.markAllRead(currentUser.id);
-  SharePay.updateNotifBell(currentUser.id);
 
   if (notifs.length === 0) {
-    container.innerHTML = SharePay.emptyState('🔔', 'ไม่มีการแจ้งเตือน');
+    container.innerHTML = '<p class="notif-empty">ไม่มีการแจ้งเตือน</p>';
     return;
   }
 
   container.innerHTML = notifs.map(n => `
-    <div class="notif-item ${n.isRead ? '' : 'unread'} glass">
+    <div class="notif-item ${n.isRead ? '' : 'unread'}">
       <div class="notif-icon">${n.type === 'payment_received' ? '✅' : n.type === 'new_expense' ? '💸' : '🔔'}</div>
       <div class="notif-body">
-        <div>${n.message}</div>
+        <div>${escHtml(n.message)}</div>
         <div class="text-muted">${SharePay.timeAgo(n.createdAt)}</div>
       </div>
     </div>`).join('');
@@ -394,7 +392,20 @@ function renderNotificationsSection() {
 
 function bindNotifications() {
   const bell = document.getElementById('notif-bell');
-  if (bell) bell.addEventListener('click', () => showSection('notifications'));
+  renderNotifDropdown();
+  if (bell) {
+    bell.addEventListener('click', () => {
+      if (bell.classList.contains('open')) {
+        renderNotifDropdown();
+      }
+    });
+  }
+  document.getElementById('mark-all-read-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.SP.Notifications.markAllRead(currentUser.id);
+    SharePay.updateNotifBell(currentUser.id);
+    renderNotifDropdown();
+  });
 }
 
 // ===== CREATE GROUP FORM =====
