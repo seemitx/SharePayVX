@@ -6,12 +6,21 @@
 const DB_KEY = "sharepay_db";
 
 function getDB() {
-  try { return JSON.parse(localStorage.getItem(DB_KEY)) || initDB(); }
+  try {
+    const db = JSON.parse(localStorage.getItem(DB_KEY)) || initDB();
+    // Backward-compat: fill in any tables that didn't exist in older saved DBs
+    let changed = false;
+    ['members', 'groups', 'expenses', 'settlements', 'notifications', 'friendRequests', 'groupInvites'].forEach(key => {
+      if (!Array.isArray(db[key])) { db[key] = []; changed = true; }
+    });
+    if (changed) saveDB(db);
+    return db;
+  }
   catch { return initDB(); }
 }
 
 function initDB() {
-  const db = { members: [], groups: [], expenses: [], settlements: [], notifications: [] };
+  const db = { members: [], groups: [], expenses: [], settlements: [], notifications: [], friendRequests: [], groupInvites: [] };
   saveDB(db);
   return db;
 }
@@ -54,6 +63,22 @@ const Members = {
     db.members = db.members.filter(m => m.id !== id);
     saveDB(db);
     SheetsAPI.deleteRow(SHEET_NAMES.members, id).catch(() => {});
+  },
+
+  // Search real (non-guest) accounts by Username / ชื่อเล่น (name) / User ID / email
+  search(query, excludeId) {
+    const q = String(query || '').trim().toLowerCase();
+    if (!q) return [];
+    return getDB().members.filter(m => {
+      if (m.id === excludeId) return false;
+      if (m.isGuest) return false;
+      return (
+        m.id.toLowerCase().includes(q) ||
+        (m.name || '').toLowerCase().includes(q) ||
+        (m.username || '').toLowerCase().includes(q) ||
+        (m.email || '').toLowerCase().includes(q)
+      );
+    }).slice(0, 20);
   }
 };
 
@@ -186,6 +211,120 @@ const Notifications = {
   }
 };
 
+// ===== FRIEND REQUESTS =====
+const FriendRequests = {
+  getAll() { return getDB().friendRequests; },
+  getById(id) { return getDB().friendRequests.find(r => r.id === id); },
+
+  // Any existing request (pending/accepted/rejected) between the two users, in either direction
+  getBetween(aId, bId) {
+    return getDB().friendRequests.find(r =>
+      (r.fromId === aId && r.toId === bId) || (r.fromId === bId && r.toId === aId));
+  },
+
+  getIncomingPending(memberId) {
+    return getDB().friendRequests.filter(r => r.toId === memberId && r.status === 'pending');
+  },
+
+  getFriends(memberId) {
+    const ids = getDB().friendRequests
+      .filter(r => r.status === 'accepted' && (r.fromId === memberId || r.toId === memberId))
+      .map(r => (r.fromId === memberId ? r.toId : r.fromId));
+    return ids.map(id => Members.getById(id)).filter(Boolean);
+  },
+
+  areFriends(aId, bId) {
+    const r = this.getBetween(aId, bId);
+    return !!r && r.status === 'accepted';
+  },
+
+  // 'none' | 'friends' | 'pending_sent' (aId sent to bId) | 'pending_received' (bId sent to aId)
+  statusBetween(aId, bId) {
+    const r = this.getBetween(aId, bId);
+    if (!r || r.status === 'rejected') return 'none';
+    if (r.status === 'accepted') return 'friends';
+    return r.fromId === aId ? 'pending_sent' : 'pending_received';
+  },
+
+  send(fromId, toId) {
+    if (!fromId || !toId) return { ok: false, error: 'ข้อมูลไม่ถูกต้อง' };
+    if (fromId === toId) return { ok: false, error: 'ไม่สามารถเพิ่มตัวเองเป็นเพื่อนได้' };
+
+    const db = getDB();
+    const existing = db.friendRequests.find(r =>
+      (r.fromId === fromId && r.toId === toId) || (r.fromId === toId && r.toId === fromId));
+
+    if (existing) {
+      if (existing.status === 'accepted') return { ok: false, error: 'เป็นเพื่อนกันอยู่แล้ว' };
+      if (existing.status === 'pending') return { ok: false, error: 'มีคำขอเป็นเพื่อนค้างอยู่แล้ว' };
+      // rejected before — allow sending a fresh request, replacing the old record
+      db.friendRequests = db.friendRequests.filter(r => r.id !== existing.id);
+    }
+
+    const request = { id: genId(), fromId, toId, status: 'pending', createdAt: new Date().toISOString() };
+    db.friendRequests.push(request);
+    saveDB(db);
+    return { ok: true, request };
+  },
+
+  respond(requestId, accept) {
+    const db = getDB();
+    const idx = db.friendRequests.findIndex(r => r.id === requestId);
+    if (idx === -1) return null;
+    if (db.friendRequests[idx].status !== 'pending') return db.friendRequests[idx];
+    db.friendRequests[idx] = { ...db.friendRequests[idx], status: accept ? 'accepted' : 'rejected', respondedAt: new Date().toISOString() };
+    saveDB(db);
+    return db.friendRequests[idx];
+  }
+};
+
+// ===== GROUP INVITES =====
+const GroupInvites = {
+  getAll() { return getDB().groupInvites; },
+  getById(id) { return getDB().groupInvites.find(i => i.id === id); },
+  getIncomingPending(memberId) { return getDB().groupInvites.filter(i => i.toId === memberId && i.status === 'pending'); },
+  getPendingForGroupAndUser(groupId, userId) {
+    return getDB().groupInvites.find(i => i.groupId === groupId && i.toId === userId && i.status === 'pending');
+  },
+
+  send(groupId, groupName, fromId, fromName, toId) {
+    const group = Groups.getById(groupId);
+    if (!group) return { ok: false, error: 'ไม่พบกลุ่ม' };
+    if ((group.memberIds || []).includes(toId)) return { ok: false, error: 'ผู้ใช้นี้อยู่ในกลุ่มแล้ว' };
+    if (toId === fromId) return { ok: false, error: 'ไม่สามารถเชิญตัวเองได้' };
+
+    const db = getDB();
+    const existing = db.groupInvites.find(i => i.groupId === groupId && i.toId === toId && i.status === 'pending');
+    if (existing) return { ok: false, error: 'มีคำเชิญค้างอยู่แล้ว' };
+
+    const invite = { id: genId(), groupId, groupName, fromId, fromName, toId, status: 'pending', createdAt: new Date().toISOString() };
+    db.groupInvites.push(invite);
+    saveDB(db);
+    return { ok: true, invite };
+  },
+
+  respond(inviteId, accept) {
+    const db = getDB();
+    const idx = db.groupInvites.findIndex(i => i.id === inviteId);
+    if (idx === -1) return null;
+    if (db.groupInvites[idx].status !== 'pending') return db.groupInvites[idx];
+
+    db.groupInvites[idx] = { ...db.groupInvites[idx], status: accept ? 'accepted' : 'rejected', respondedAt: new Date().toISOString() };
+
+    if (accept) {
+      const gIdx = db.groups.findIndex(g => g.id === db.groupInvites[idx].groupId);
+      if (gIdx !== -1) {
+        const memberIds = db.groups[gIdx].memberIds || [];
+        if (!memberIds.includes(db.groupInvites[idx].toId)) {
+          db.groups[gIdx] = { ...db.groups[gIdx], memberIds: [...memberIds, db.groupInvites[idx].toId] };
+        }
+      }
+    }
+    saveDB(db);
+    return db.groupInvites[idx];
+  }
+};
+
 // ===== DEBT CALCULATOR =====
 function calculateDebts(groupId) {
   const expenses = Expenses.getByGroup(groupId);
@@ -236,4 +375,4 @@ function calculateDebts(groupId) {
   return transactions;
 }
 
-window.SP = { Members, Groups, Expenses, Settlements, Notifications, calculateDebts, genId };
+window.SP = { Members, Groups, Expenses, Settlements, Notifications, FriendRequests, GroupInvites, calculateDebts, genId };
