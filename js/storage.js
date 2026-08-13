@@ -384,31 +384,58 @@ const GroupInvites = {
 };
 
 // ===== DEBT CALCULATOR =====
-function calculateDebts(groupId) {
+//
+// Single source of truth for "who owes whom" in a group. Every screen that
+// shows a debt total (Dashboard, Settlements tab, group detail, settle badge)
+// MUST derive its numbers from getGroupBalances()/calculateDebts() below —
+// never re-implement the per-person math elsewhere — so the figures always
+// agree with each other.
+//
+// Net balance per member: positive = other people owe this member money,
+// negative = this member owes other people money.
+//
+// IMPORTANT — no self-debt: when an expense's payer is also included in the
+// "split with" list (paying for themselves too), their own share of the bill
+// is simply their own money and must NOT become a debt. We enforce this by
+// skipping the payer when walking the split list below (`mid !== exp.paidById`),
+// so the payer's balance only ever changes by what OTHER people owe them —
+// never by their own share. This is enforced here at the data layer, not by
+// hiding/filtering anything in the UI.
+function getGroupBalances(groupId) {
   const expenses = Expenses.getByGroup(groupId);
   const group = Groups.getById(groupId);
-  if (!group) return [];
-
   const balance = {};
+  if (!group) return balance;
+
   (group.memberIds || []).forEach(mid => { balance[mid] = 0; });
 
   expenses.forEach(exp => {
-    const perPerson = exp.amount / (exp.splitMemberIds || [exp.paidById]).length;
-    (exp.splitMemberIds || [exp.paidById]).forEach(mid => {
-      if (mid !== exp.paidById) {
-        balance[mid] = (balance[mid] || 0) - perPerson;
-        balance[exp.paidById] = (balance[exp.paidById] || 0) + perPerson;
-      }
+    const splitWith = exp.splitMemberIds || [exp.paidById];
+    const perPerson = exp.amount / splitWith.length;
+    splitWith.forEach(mid => {
+      // Guard: the payer never owes themselves for their own share.
+      if (mid === exp.paidById) return;
+      balance[mid] = (balance[mid] || 0) - perPerson;
+      balance[exp.paidById] = (balance[exp.paidById] || 0) + perPerson;
     });
   });
 
-  // Apply confirmed settlements
+  // Apply confirmed settlements (actual payments already made)
   Settlements.getByGroup(groupId).forEach(s => {
     if (s.status === 'confirmed') {
       balance[s.fromId] = (balance[s.fromId] || 0) + s.amount;
       balance[s.toId]   = (balance[s.toId]   || 0) - s.amount;
     }
   });
+
+  return balance;
+}
+
+// Turns a group's net balances into the minimal set of "fromId → toId : amount"
+// payments needed to settle up. Built strictly from getGroupBalances(), so a
+// debtor/creditor id can never equal itself (someone can't be both at once).
+function calculateDebts(groupId) {
+  const balance = getGroupBalances(groupId);
 
   const debtors   = Object.entries(balance).filter(([,v]) => v < -0.01).map(([id,v]) => ({ id, amount: v }));
   const creditors = Object.entries(balance).filter(([,v]) => v >  0.01).map(([id,v]) => ({ id, amount: v }));
@@ -433,4 +460,4 @@ function calculateDebts(groupId) {
   return transactions;
 }
 
-window.SP = { Members, Groups, Expenses, Settlements, Notifications, FriendRequests, GroupInvites, calculateDebts, genId };
+window.SP = { Members, Groups, Expenses, Settlements, Notifications, FriendRequests, GroupInvites, calculateDebts, getGroupBalances, genId };
