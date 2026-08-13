@@ -906,6 +906,12 @@ function initFriendsFeature() {
 
   document.getElementById('friend-search-input')?.addEventListener('input', debounce(renderFriendSearchResults, 250));
 
+  document.getElementById('regen-friend-code-btn')?.addEventListener('click', regenerateMyFriendCode);
+  document.getElementById('add-by-code-btn')?.addEventListener('click', addFriendByCode);
+  const codeInput = document.getElementById('friend-code-input');
+  codeInput?.addEventListener('input', e => { e.target.value = e.target.value.toUpperCase(); });
+  codeInput?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addFriendByCode(); } });
+
   updateFriendsEntryBadge();
 }
 
@@ -919,7 +925,43 @@ function switchFriendsTab(tab) {
   document.querySelectorAll('#friends-modal .friends-tab-panel').forEach(p => p.classList.toggle('active', p.id === `friends-panel-${tab}`));
   if (tab === 'friends') renderFriendsList();
   if (tab === 'requests') renderFriendRequestsList();
-  if (tab === 'search') renderFriendSearchResults();
+  if (tab === 'search') { renderMyFriendCode(); renderFriendSearchResults(); }
+}
+
+function renderMyFriendCode() {
+  const el = document.getElementById('my-friend-code');
+  if (!el) return;
+  el.textContent = window.SP.Members.ensureFriendCode(currentUser.id);
+}
+
+function regenerateMyFriendCode() {
+  const code = window.SP.Members.regenerateFriendCode(currentUser.id);
+  const el = document.getElementById('my-friend-code');
+  if (el) el.textContent = code;
+  SharePay.showToast('สุ่มโค้ดใหม่แล้ว 🔀', 'success');
+}
+
+function addFriendByCode() {
+  const input = document.getElementById('friend-code-input');
+  const code = (input?.value || '').trim();
+  if (!code) { SharePay.showToast('กรุณากรอกโค้ดเพื่อน', 'error'); return; }
+
+  const target = window.SP.Members.getByFriendCode(code);
+  if (!target) { SharePay.showToast('ไม่พบผู้ใช้ที่มีโค้ดนี้', 'error'); return; }
+  if (target.id === currentUser.id) { SharePay.showToast('นี่คือโค้ดของคุณเอง', 'error'); return; }
+
+  const res = window.SP.FriendRequests.send(currentUser.id, target.id);
+  if (!res.ok) { SharePay.showToast(res.error, 'error'); return; }
+
+  window.SP.Notifications.create({
+    memberId: target.id, type: 'friend_request',
+    message: `${currentUser.name} ส่งคำขอเป็นเพื่อนถึงคุณ (ด้วยโค้ดเพื่อน)`,
+    data: { requestId: res.request.id }
+  });
+
+  SharePay.showToast(`ส่งคำขอเป็นเพื่อนถึง ${target.name} แล้ว`, 'success');
+  if (input) input.value = '';
+  renderFriendSearchResults();
 }
 
 function renderFriendsList() {
