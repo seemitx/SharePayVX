@@ -238,18 +238,28 @@ const Notifications = {
     const n = { id: genId(), createdAt: new Date().toISOString(), isRead: false, ...data };
     db.notifications.push(n);
     saveDB(db);
+    SheetsAPI.createRow(SHEET_NAMES.notifications, { ...n, data: n.data ? JSON.stringify(n.data) : '' }).catch(() => {});
     return n;
   },
 
   markRead(id) {
     const db = getDB();
     const idx = db.notifications.findIndex(n => n.id === id);
-    if (idx !== -1) { db.notifications[idx].isRead = true; saveDB(db); }
+    if (idx !== -1) {
+      db.notifications[idx].isRead = true;
+      saveDB(db);
+      SheetsAPI.updateRow(SHEET_NAMES.notifications, id, { isRead: true }).catch(() => {});
+    }
   },
 
   markAllRead(memberId) {
     const db = getDB();
-    db.notifications.forEach(n => { if (n.memberId === memberId) n.isRead = true; });
+    db.notifications.forEach(n => {
+      if (n.memberId === memberId && !n.isRead) {
+        n.isRead = true;
+        SheetsAPI.updateRow(SHEET_NAMES.notifications, n.id, { isRead: true }).catch(() => {});
+      }
+    });
     saveDB(db);
   }
 };
@@ -307,6 +317,7 @@ const FriendRequests = {
     const request = { id: genId(), fromId, toId, status: 'pending', createdAt: new Date().toISOString() };
     db.friendRequests.push(request);
     saveDB(db);
+    SheetsAPI.createRow(SHEET_NAMES.friendRequests, request).catch(() => {});
     return { ok: true, request };
   },
 
@@ -317,6 +328,7 @@ const FriendRequests = {
     if (db.friendRequests[idx].status !== 'pending') return db.friendRequests[idx];
     db.friendRequests[idx] = { ...db.friendRequests[idx], status: accept ? 'accepted' : 'rejected', respondedAt: new Date().toISOString() };
     saveDB(db);
+    SheetsAPI.updateRow(SHEET_NAMES.friendRequests, requestId, db.friendRequests[idx]).catch(() => {});
     return db.friendRequests[idx];
   }
 };
@@ -343,6 +355,7 @@ const GroupInvites = {
     const invite = { id: genId(), groupId, groupName, fromId, fromName, toId, status: 'pending', createdAt: new Date().toISOString() };
     db.groupInvites.push(invite);
     saveDB(db);
+    SheetsAPI.createRow(SHEET_NAMES.groupInvites, invite).catch(() => {});
     return { ok: true, invite };
   },
 
@@ -360,10 +373,12 @@ const GroupInvites = {
         const memberIds = db.groups[gIdx].memberIds || [];
         if (!memberIds.includes(db.groupInvites[idx].toId)) {
           db.groups[gIdx] = { ...db.groups[gIdx], memberIds: [...memberIds, db.groupInvites[idx].toId] };
+          SheetsAPI.updateRow(SHEET_NAMES.groups, db.groups[gIdx].id, { ...db.groups[gIdx], memberIds: db.groups[gIdx].memberIds.join(',') }).catch(() => {});
         }
       }
     }
     saveDB(db);
+    SheetsAPI.updateRow(SHEET_NAMES.groupInvites, inviteId, db.groupInvites[idx]).catch(() => {});
     return db.groupInvites[idx];
   }
 };
