@@ -66,29 +66,19 @@ function initDashboard() {
   updateSettleBadge();
 }
 
+// Dashboard totals are derived from window.SP.getGroupBalances() — the exact
+// same debt engine that powers the "การชำระหนี้" (Settlements) tab — so the
+// two pages can never disagree. We sum this member's net balance across every
+// group they belong to: a positive balance means others owe them (owed),
+// a negative balance means they owe others (owing).
 function renderBalanceSummary() {
-  const expenses   = window.SP.Expenses.getByMember(currentUser.id);
-  const settlements = window.SP.Settlements.getByMember(currentUser.id);
-
   let owed = 0, owing = 0;
-  expenses.forEach(e => {
-    const split = e.amount / Math.max(1, (e.splitMemberIds || []).length);
-    if (e.paidById === currentUser.id) {
-      (e.splitMemberIds || []).forEach(mid => { if (mid !== currentUser.id) owed += split; });
-    } else if ((e.splitMemberIds || []).includes(currentUser.id)) {
-      owing += split;
-    }
+  window.SP.Groups.getByMember(currentUser.id).forEach(g => {
+    const bal = window.SP.getGroupBalances(g.id)[currentUser.id] || 0;
+    if (bal > 0.004) owed += bal;
+    else if (bal < -0.004) owing += -bal;
   });
 
-  settlements.forEach(s => {
-    if (s.status === 'confirmed') {
-      if (s.fromId === currentUser.id) owing  -= s.amount;
-      if (s.toId   === currentUser.id) owed   -= s.amount;
-    }
-  });
-
-  owed  = Math.max(0, owed);
-  owing = Math.max(0, owing);
   const net = owed - owing;
 
   const set = (id, val, currency = true) => {
@@ -710,6 +700,8 @@ function populateExpenseGroupDependentFields() {
   if (!group) {
     paidBySelect.innerHTML = '<option value="">เลือกผู้จ่าย</option>';
     memberSelector.innerHTML = '<p style="color: var(--text-tertiary); font-size: var(--text-sm);">เลือกกลุ่มก่อน</p>';
+    const hideBtn1 = document.getElementById('select-all-members-btn');
+    if (hideBtn1) hideBtn1.style.display = 'none';
     updateSplitPreview();
     return;
   }
@@ -724,6 +716,8 @@ function populateExpenseGroupDependentFields() {
   if (members.length === 0) {
     paidBySelect.innerHTML = '<option value="">เลือกผู้จ่าย</option>';
     memberSelector.innerHTML = '<p style="color: var(--text-tertiary); font-size: var(--text-sm);">เลือกกลุ่มก่อน</p>';
+    const hideBtn2 = document.getElementById('select-all-members-btn');
+    if (hideBtn2) hideBtn2.style.display = 'none';
     updateSplitPreview();
     return;
   }
@@ -741,10 +735,35 @@ function populateExpenseGroupDependentFields() {
     </label>`).join('');
 
   memberSelector.querySelectorAll('input[name="ae-member"]').forEach(cb => {
-    cb.addEventListener('change', updateSplitPreview);
+    cb.addEventListener('change', () => { updateSplitPreview(); updateSelectAllMembersBtn(); });
   });
 
+  const selectAllBtn = document.getElementById('select-all-members-btn');
+  if (selectAllBtn) selectAllBtn.style.display = members.length > 0 ? '' : 'none';
+
   updateSplitPreview();
+  updateSelectAllMembersBtn();
+}
+
+// Keeps the "เลือกทั้งหมด / ยกเลิกทั้งหมด" button in sync with the checkboxes,
+// whether they were changed by the button itself or by hand one at a time.
+function updateSelectAllMembersBtn() {
+  const btn = document.getElementById('select-all-members-btn');
+  if (!btn) return;
+  const boxes = [...document.querySelectorAll('[name="ae-member"]')];
+  const allChecked = boxes.length > 0 && boxes.every(cb => cb.checked);
+  btn.textContent = allChecked ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด';
+}
+
+// "เลือกทั้งหมด" / "ยกเลิกทั้งหมด": toggles every "หารกับ" checkbox together
+// and immediately recalculates the split preview.
+function toggleSelectAllMembers() {
+  const boxes = [...document.querySelectorAll('[name="ae-member"]')];
+  if (boxes.length === 0) return;
+  const shouldSelectAll = !boxes.every(cb => cb.checked);
+  boxes.forEach(cb => { cb.checked = shouldSelectAll; });
+  updateSplitPreview();
+  updateSelectAllMembersBtn();
 }
 
 // Re-populate the payer/split fields after a guest is added mid-form, without
@@ -764,6 +783,7 @@ function refreshExpenseMemberFields(autoCheckId) {
     paidBySelect.value = prevPayer;
   }
   updateSplitPreview();
+  updateSelectAllMembersBtn();
 }
 
 // Reset the "add a custom name" mini-form back to its collapsed state
@@ -901,6 +921,7 @@ function initExpenseForm() {
     populateExpenseGroupDependentFields();
   });
   document.getElementById('expense-amount')?.addEventListener('input', updateSplitPreview);
+  document.getElementById('select-all-members-btn')?.addEventListener('click', toggleSelectAllMembers);
 
   // "เพิ่มชื่อคนใหม่" (add a custom/guest name) mini-form
   const showBtn    = document.getElementById('show-add-member-btn');
