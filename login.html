@@ -494,12 +494,17 @@
 
   <script src="./js/config.js"></script>
   <script src="./js/storage.js"></script>
+  <script src="./js/sync.js"></script>
   <script src="./js/auth.js"></script>
   <script src="./js/ui.js"></script>
   <script>
     // Init demo data if DB is empty
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       SharePay.initTheme();
+      // Pull the latest members/data from the cloud first, so accounts
+      // created on other devices are known locally before we decide
+      // whether this is a genuinely empty (first-run) database.
+      try { await window.CloudSync?.pullAll(); } catch { /* offline / not configured — carry on with local data */ }
       const members = window.SP.Members.getAll();
       if (members.length === 0) {
         // Create demo accounts
@@ -557,6 +562,11 @@
       loginBtn.querySelector('.spinner').style.display = 'block';
 
       try {
+        // Make sure we have the latest accounts from the cloud before
+        // checking credentials — otherwise logging in from a device
+        // that never created this account locally would always fail.
+        try { await window.CloudSync?.pullAll(); } catch { /* offline — fall back to whatever's local */ }
+
         const result = window.Auth.login(email, password);
         if (!result.ok) {
           showFieldError('email-error', result.error);
