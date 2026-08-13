@@ -11,13 +11,16 @@ const COLORS = { food:'#F59E0B',fuel:'#EF4444',accommodation:'#22D3EE',transport
 
 let charts = {}; // keep Chart.js instances so we can destroy/redraw
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   currentUser = window.Auth.guard('admin');
   if (!currentUser) return;
 
   try {
     SharePay.initTheme();
     SharePay.populateNavUser(currentUser);
+
+    // Pull the latest data from the cloud before rendering admin tables.
+    try { await window.CloudSync?.pullAll(); } catch { /* offline — carry on with local data */ }
     // admin.html uses its own sidebar ids not covered by populateNavUser
     const nameEl = document.getElementById('sidebar-name');
     if (nameEl) nameEl.textContent = currentUser.name || currentUser.email;
