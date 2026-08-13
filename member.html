@@ -420,6 +420,18 @@
         </select>
       </div>
 
+      <!-- Add a custom (guest) person, used by both "ผู้จ่าย" and "หารกับ" -->
+      <div class="form-group" id="add-custom-member-group">
+        <button type="button" class="btn-add-custom-member" id="show-add-member-btn">
+          <span>➕</span> เพิ่มชื่อคนใหม่ (ไม่ต้องมีบัญชี)
+        </button>
+        <div class="add-member-inline-row" id="add-member-inline">
+          <input type="text" id="new-member-name" class="form-input" placeholder="พิมพ์ชื่อ เช่น เพื่อนแขก" maxlength="40">
+          <button type="button" class="btn btn-secondary btn-sm" id="cancel-add-member-btn">ยกเลิก</button>
+          <button type="button" class="btn btn-primary btn-sm" id="confirm-add-member-btn">เพิ่ม</button>
+        </div>
+      </div>
+
       <!-- Split Members -->
       <div class="form-group">
         <label class="form-label">หารกับ *</label>
