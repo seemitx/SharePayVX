@@ -512,8 +512,21 @@
 
       <!-- Search -->
       <div class="friends-tab-panel" id="friends-panel-search">
-        <div class="form-group">
-          <input type="search" id="friend-search-input" class="form-input" placeholder="ค้นหาด้วย Username, ชื่อเล่น หรือ User ID">
+        <div class="friend-code-box">
+          <div class="friend-code-row">
+            <div>
+              <div class="text-muted" style="font-size: var(--text-xs);">โค้ดเพื่อนของฉัน</div>
+              <div class="friend-code-value" id="my-friend-code">-----</div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="regen-friend-code-btn">🔀 สุ่มโค้ดใหม่</button>
+          </div>
+          <div class="friend-code-add-row">
+            <input type="text" id="friend-code-input" class="form-input" placeholder="กรอกโค้ดเพื่อน (5 ตัวอักษร)" maxlength="5">
+            <button type="button" class="btn btn-primary btn-sm" id="add-by-code-btn">เพิ่มเพื่อน</button>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top: var(--space-4);">
+          <input type="search" id="friend-search-input" class="form-input" placeholder="หรือค้นหาด้วย Username, ชื่อเล่น หรือ User ID">
         </div>
         <div id="friend-search-results"></div>
       </div>
