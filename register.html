@@ -460,6 +460,7 @@
 
   <script src="./js/config.js"></script>
   <script src="./js/storage.js"></script>
+  <script src="./js/sync.js"></script>
   <script src="./js/auth.js"></script>
   <script src="./js/ui.js"></script>
   <script>
@@ -576,6 +577,11 @@
       document.getElementById('reg-spinner').style.display = 'block';
 
       try {
+        // Pull existing accounts down first so we correctly catch
+        // "email already used" even if that account was created on
+        // a different device/browser.
+        try { await window.CloudSync?.pullAll(); } catch { /* offline — fall back to whatever's local */ }
+
         const result = window.Auth.register(name, email, password);
         if (!result.ok) {
           showErr('reg-name-error', result.error);
