@@ -77,11 +77,12 @@
 
   /* Member mobile layout */
   .member-layout {
-    grid-template-rows: 56px 1fr 64px;
+    grid-template-rows: 56px 1fr;
   }
 
   .member-content {
     padding: var(--space-3);
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
   }
 
   .balance-hero {
@@ -137,7 +138,7 @@
 
   /* Toast on mobile */
   .toast-container {
-    bottom: calc(72px + env(safe-area-inset-bottom));
+    bottom: calc(96px + env(safe-area-inset-bottom));
     left: var(--space-4);
     right: var(--space-4);
   }
@@ -212,6 +213,7 @@
   /* Member content wider */
   .member-content {
     padding: var(--space-6);
+    padding-bottom: calc(108px + env(safe-area-inset-bottom));
   }
 
   .balance-cards {
@@ -320,6 +322,7 @@
     display: none !important;
   }
 
+
   .admin-layout,
   .member-layout {
     display: block;
@@ -344,14 +347,13 @@
   }
 }
 
-/* ===== iOS Safe Area ===== */
+/* ===== iOS Safe Area =====
+   The floating nav bar already accounts for the safe area in its own
+   `bottom` offset (see .member-bottom-nav in member.css), so it no
+   longer needs an added inner padding-bottom here. */
 @supports (padding: env(safe-area-inset-bottom)) {
-  .member-bottom-nav {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
   .fab {
-    bottom: calc(80px + env(safe-area-inset-bottom));
+    bottom: calc(104px + env(safe-area-inset-bottom));
   }
 
   .toast-container {
@@ -370,7 +372,7 @@
   }
 
   .member-layout {
-    grid-template-rows: 56px 1fr 52px;
+    grid-template-rows: 56px 1fr;
   }
 }
 
