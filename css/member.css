@@ -637,6 +637,58 @@
   flex: 1;
 }
 
+.member-checkbox-guest-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--glass-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
+}
+
+/* ===== Add Custom (Guest) Member ===== */
+.btn-add-custom-member {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: transparent;
+  border: 1.5px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-add-custom-member:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.add-member-inline-row {
+  display: none;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.add-member-inline-row.active {
+  display: flex;
+}
+
+.add-member-inline-row .form-input {
+  flex: 1;
+}
+
+.add-member-inline-row .btn {
+  flex-shrink: 0;
+}
+
 /* ===== Split Preview ===== */
 .split-preview {
   background: var(--primary-light);
