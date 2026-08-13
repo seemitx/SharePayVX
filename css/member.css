@@ -6,7 +6,7 @@
 /* ===== Member Layout ===== */
 .member-layout {
   display: grid;
-  grid-template-rows: 64px 1fr 56px;
+  grid-template-rows: 64px 1fr;
   min-height: 100dvh;
   background: var(--bg-base);
 }
@@ -59,6 +59,7 @@
 /* ===== Member Content ===== */
 .member-content {
   padding: var(--space-4);
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
   overflow-y: auto;
   max-width: 640px;
   margin: 0 auto;
@@ -400,17 +401,67 @@
   font-size: var(--text-xs);
 }
 
-/* ===== Bottom Navigation ===== */
-.member-bottom-nav {
-  position: sticky;
-  bottom: 0;
-  background: var(--bg-overlay);
-  backdrop-filter: blur(20px);
+.settlement-group-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  padding-top: var(--space-3);
+  margin-top: var(--space-1);
   border-top: 1px solid var(--border-subtle);
+}
+
+.settlement-items {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-4);
+  line-height: 1.5;
+}
+
+.settlement-items strong { color: var(--text-secondary); font-weight: 600; }
+
+/* Settle summary strip (3 stats) */
+.settle-summary {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  padding: var(--space-1) 0;
-  padding-bottom: env(safe-area-inset-bottom);
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.settle-summary .balance-card { padding: var(--space-3); }
+.settle-summary .balance-card-amount { font-size: var(--text-lg); }
+.settle-summary .balance-card-label { font-size: 10px; }
+
+/* Settle tab panels */
+.settle-tab-panel { display: none; }
+.settle-tab-panel.active { display: block; }
+
+/* Centered, clean empty state for settlements */
+.settlement-list .empty-state,
+.settle-tab-panel .empty-state {
+  min-height: 40vh;
+  justify-content: center;
+}
+
+/* ===== Floating Glass Navigation Bar ===== */
+.member-bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, calc(12px + env(safe-area-inset-bottom)));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: max-content;
+  max-width: calc(100vw - 20px);
+  padding: 6px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--shadow-lg), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
   z-index: var(--z-sticky);
 }
 
@@ -419,47 +470,70 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: var(--space-2) 0;
+  gap: 2px;
+  padding: 7px 13px;
+  min-width: 52px;
   cursor: pointer;
   color: var(--text-tertiary);
-  font-size: 10px;
-  font-weight: 500;
-  transition: all var(--transition-fast);
+  font-size: 9.5px;
+  font-weight: 600;
   border: none;
-  background: none;
+  background: transparent;
+  border-radius: var(--radius-full);
   position: relative;
+  transition: color 0.2s ease, background var(--transition-spring), transform var(--transition-spring), box-shadow var(--transition-spring);
 }
+
+.bottom-nav-item:hover { color: var(--text-secondary); }
 
 .bottom-nav-item.active {
-  color: var(--primary);
+  color: white;
+  background: var(--gradient-primary);
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.5);
+  transform: translateY(-2px);
 }
 
-.bottom-nav-item.active::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 24px;
-  height: 3px;
-  background: var(--primary);
-  border-radius: 0 0 3px 3px;
-}
+.bottom-nav-item:active { transform: scale(0.92); }
+.bottom-nav-item.active:active { transform: translateY(-2px) scale(0.94); }
 
 .bottom-nav-icon {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   line-height: 1;
+  position: relative;
 }
 
 .bottom-nav-label {
   line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.bottom-nav-badge {
+  position: absolute;
+  top: -3px;
+  right: 2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  background: var(--accent-red);
+  color: #fff;
+  border-radius: var(--radius-full);
+  font-size: 9px;
+  font-weight: 700;
+  align-items: center;
+  justify-content: center;
+  display: none;
+  box-shadow: 0 0 0 2px var(--bg-base);
+}
+
+.bottom-nav-item.active .bottom-nav-badge {
+  box-shadow: 0 0 0 2px var(--primary);
 }
 
 /* ===== FAB (Floating Action Button) ===== */
 .fab {
   position: fixed;
-  bottom: calc(80px + env(safe-area-inset-bottom));
+  bottom: calc(104px + env(safe-area-inset-bottom));
   right: var(--space-5);
   width: 56px;
   height: 56px;
