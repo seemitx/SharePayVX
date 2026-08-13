@@ -635,6 +635,7 @@ window.openAddExpense = function(groupId) {
   document.querySelector('.category-btn[data-cat="food"]')?.classList.add('selected');
   document.getElementById('expense-category').value = 'food';
   document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+  resetAddMemberInline();
 
   // Populate group dropdown with the current user's groups
   const groups = window.SP.Groups.getByMember(currentUser.id);
@@ -663,13 +664,14 @@ function populateExpenseGroupDependentFields() {
   }
 
   paidBySelect.innerHTML = members.map(m =>
-    `<option value="${m.id}" ${m.id === currentUser.id ? 'selected' : ''}>${m.name}</option>`).join('');
+    `<option value="${m.id}" ${m.id === currentUser.id ? 'selected' : ''}>${escHtml(m.name)}${m.isGuest ? ' (เพิ่มเอง)' : ''}</option>`).join('');
 
   memberSelector.innerHTML = members.map(m => `
     <label class="member-checkbox-item">
-      <input type="checkbox" name="ae-member" value="${m.id}" data-name="${m.name}" ${m.id === currentUser.id ? 'checked' : ''}>
-      <img class="member-checkbox-avatar" src="${m.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=3B82F6&color=fff`}" alt="${m.name}">
-      <span class="member-checkbox-name">${m.name}</span>
+      <input type="checkbox" name="ae-member" value="${m.id}" data-name="${escHtml(m.name)}" ${m.id === currentUser.id ? 'checked' : ''}>
+      <img class="member-checkbox-avatar" src="${m.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=3B82F6&color=fff`}" alt="${escHtml(m.name)}">
+      <span class="member-checkbox-name">${escHtml(m.name)}</span>
+      ${m.isGuest ? '<span class="member-checkbox-guest-tag">เพิ่มเอง</span>' : ''}
     </label>`).join('');
 
   memberSelector.querySelectorAll('input[name="ae-member"]').forEach(cb => {
@@ -677,6 +679,68 @@ function populateExpenseGroupDependentFields() {
   });
 
   updateSplitPreview();
+}
+
+// Re-populate the payer/split fields after a guest is added mid-form, without
+// losing whatever the user had already picked (rebuilds, then restores selection).
+function refreshExpenseMemberFields(autoCheckId) {
+  const prevChecked = new Set([...document.querySelectorAll('[name="ae-member"]:checked')].map(cb => cb.value));
+  const prevPayer = document.getElementById('expense-paidby').value;
+  if (autoCheckId) prevChecked.add(autoCheckId);
+
+  populateExpenseGroupDependentFields();
+
+  document.querySelectorAll('[name="ae-member"]').forEach(cb => {
+    cb.checked = prevChecked.has(cb.value);
+  });
+  const paidBySelect = document.getElementById('expense-paidby');
+  if (prevPayer && [...paidBySelect.options].some(o => o.value === prevPayer)) {
+    paidBySelect.value = prevPayer;
+  }
+  updateSplitPreview();
+}
+
+// Reset the "add a custom name" mini-form back to its collapsed state
+function resetAddMemberInline() {
+  const inlineRow = document.getElementById('add-member-inline');
+  const showBtn = document.getElementById('show-add-member-btn');
+  const nameInput = document.getElementById('new-member-name');
+  if (nameInput) nameInput.value = '';
+  inlineRow?.classList.remove('active');
+  if (showBtn) showBtn.style.display = '';
+}
+
+// Let the person type a name that isn't a registered account (a "guest"), add
+// them to the selected group, and make them immediately pickable as ผู้จ่าย/หารกับ.
+function addCustomGuestMember() {
+  const groupId = document.getElementById('expense-group').value;
+  const nameInput = document.getElementById('new-member-name');
+  const name = (nameInput?.value || '').trim();
+
+  if (!groupId) { SharePay.showToast('กรุณาเลือกกลุ่มก่อน', 'error'); return; }
+  if (!name) { SharePay.showToast('กรุณาพิมพ์ชื่อ', 'error'); return; }
+
+  const group = window.SP.Groups.getById(groupId);
+  const existingNames = (group?.memberIds || [])
+    .map(id => window.SP.Members.getById(id)?.name?.toLowerCase())
+    .filter(Boolean);
+  if (existingNames.includes(name.toLowerCase())) {
+    SharePay.showToast('มีชื่อนี้ในกลุ่มอยู่แล้ว', 'error');
+    return;
+  }
+
+  const guest = window.SP.Members.create({
+    name,
+    email: `guest-${window.SP.genId()}@sharepay.local`,
+    role: 'guest',
+    isGuest: true
+  });
+
+  window.SP.Groups.update(groupId, { memberIds: [...(group?.memberIds || []), guest.id] });
+
+  resetAddMemberInline();
+  refreshExpenseMemberFields(guest.id);
+  SharePay.showToast(`เพิ่ม "${name}" เข้ากลุ่มแล้ว ✅`, 'success');
 }
 
 // Live-update the "สรุปการหาร" (split summary) preview
@@ -748,6 +812,7 @@ function submitExpense(e) {
   document.getElementById('add-expense-modal').classList.remove('active');
   document.getElementById('add-expense-form').reset();
   document.getElementById('split-preview').style.display = 'none';
+  resetAddMemberInline();
   initDashboard();
   renderExpensesSection();
 }
@@ -756,8 +821,27 @@ function initExpenseForm() {
   const form = document.getElementById('add-expense-form');
   if (!form) return;
   form.addEventListener('submit', submitExpense);
-  document.getElementById('expense-group')?.addEventListener('change', populateExpenseGroupDependentFields);
+  document.getElementById('expense-group')?.addEventListener('change', () => {
+    resetAddMemberInline();
+    populateExpenseGroupDependentFields();
+  });
   document.getElementById('expense-amount')?.addEventListener('input', updateSplitPreview);
+
+  // "เพิ่มชื่อคนใหม่" (add a custom/guest name) mini-form
+  const showBtn    = document.getElementById('show-add-member-btn');
+  const inlineRow  = document.getElementById('add-member-inline');
+  const nameInput  = document.getElementById('new-member-name');
+
+  showBtn?.addEventListener('click', () => {
+    inlineRow.classList.add('active');
+    showBtn.style.display = 'none';
+    nameInput?.focus();
+  });
+  document.getElementById('cancel-add-member-btn')?.addEventListener('click', resetAddMemberInline);
+  document.getElementById('confirm-add-member-btn')?.addEventListener('click', addCustomGuestMember);
+  nameInput?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addCustomGuestMember(); }
+  });
 }
 
 function bindLogout() {
