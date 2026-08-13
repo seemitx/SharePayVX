@@ -30,8 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initGroupForm();
     initExpenseForm();
+    initSettleTabs();
     bindLogout();
     bindNotifications();
+    updateSettleBadge();
   } finally {
     // Hide the full-screen page loader once the dashboard is ready
     const loader = document.getElementById('page-loader');
@@ -45,6 +47,7 @@ function initDashboard() {
   renderMyGroups();
   renderRecentExpenses();
   renderMonthlyTotal();
+  updateSettleBadge();
 }
 
 function renderBalanceSummary() {
@@ -80,9 +83,10 @@ function renderBalanceSummary() {
   set('total-owed',  owed);
   set('total-owing', owing);
   const netEl = document.getElementById('net-balance');
-  if (netEl) {
-    netEl.textContent = SharePay.formatCurrency(Math.abs(net));
-    netEl.className = net >= 0 ? 'stat-value positive' : 'stat-value negative';
+  if (netEl) netEl.textContent = SharePay.formatCurrency(Math.abs(net));
+  const statusEl = document.getElementById('balance-status');
+  if (statusEl) {
+    statusEl.textContent = net > 0.004 ? 'คุณจะได้รับเงินคืน 🎉' : net < -0.004 ? 'คุณมียอดที่ต้องจ่าย' : 'ทุกอย่างเท่ากันแล้ว ✅';
   }
 }
 
@@ -148,6 +152,8 @@ function renderMonthlyTotal() {
   if (el) el.textContent = SharePay.formatCurrency(total);
   const countEl = document.getElementById('expense-count');
   if (countEl) countEl.textContent = expenses.length;
+  const groupCountEl = document.getElementById('group-count');
+  if (groupCountEl) groupCountEl.textContent = window.SP.Groups.getByMember(currentUser.id).length;
 }
 
 // ===== NAVIGATION =====
@@ -342,32 +348,208 @@ window.deleteGroup = function(id) {
 };
 
 // ===== SETTLEMENTS SECTION =====
-function renderSettlementsSection() {
-  const container = document.getElementById('settlement-list');
-  if (!container) return;
-  const settlements = window.SP.Settlements.getByMember(currentUser.id);
 
-  if (settlements.length === 0) {
-    container.innerHTML = SharePay.emptyState('✅', 'ไม่มียอดค้างชำระ', 'เยี่ยม! ทุกอย่างเท่ากันแล้ว');
-    return;
+// Expenses in a group that were shared between exactly these two people
+// (used to show "related items" on a debt card)
+function getRelatedExpenses(groupId, aId, bId) {
+  return window.SP.Expenses.getByGroup(groupId).filter(e => {
+    const split = e.splitMemberIds || [];
+    return (e.paidById === aId && split.includes(bId)) || (e.paidById === bId && split.includes(aId));
+  });
+}
+
+// All of this member's live, calculated debts across every group they're in.
+// `owe`  = money the member needs to pay someone else
+// `owed` = money someone else needs to pay the member
+function getMyDebts(memberId) {
+  const owe = [];
+  const owed = [];
+  window.SP.Groups.getByMember(memberId).forEach(g => {
+    window.SP.calculateDebts(g.id).forEach(d => {
+      if (d.fromId !== memberId && d.toId !== memberId) return;
+      const entry = {
+        groupId: g.id, groupName: g.name, groupIcon: g.icon || '👥',
+        fromId: d.fromId, fromName: d.fromName,
+        toId: d.toId, toName: d.toName,
+        amount: d.amount,
+        items: getRelatedExpenses(g.id, d.fromId, d.toId)
+      };
+      (d.fromId === memberId ? owe : owed).push(entry);
+    });
+  });
+  return { owe, owed };
+}
+
+function avatarUrl(member, bg) {
+  if (member?.avatar) return member.avatar;
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(member?.name || '?')}&background=${bg}&color=fff`;
+}
+
+// Escapes a string for safe embedding inside a single-quoted onclick="..." JS string
+function jsStr(str) {
+  return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function renderDebtCard(entry, direction) {
+  const iAmPayer = direction === 'owe';
+  const other = window.SP.Members.getById(iAmPayer ? entry.toId : entry.fromId);
+  const meAvatar    = avatarUrl(currentUser, '0EA5E9');
+  const otherAvatar = avatarUrl(other, '22D3EE');
+  const otherName   = other?.name || (iAmPayer ? entry.toName : entry.fromName);
+
+  const leftUser  = iAmPayer ? { name: 'ฉัน', avatar: meAvatar } : { name: otherName, avatar: otherAvatar };
+  const rightUser = iAmPayer ? { name: otherName, avatar: otherAvatar } : { name: 'ฉัน', avatar: meAvatar };
+
+  const shownItems = entry.items.slice(0, 3).map(i => escHtml(i.title)).join(', ');
+  const moreCount = entry.items.length - 3;
+  const itemsLine = entry.items.length
+    ? `เกี่ยวข้องกับ <strong>${shownItems}</strong>${moreCount > 0 ? ` และอีก ${moreCount} รายการ` : ''}`
+    : 'ยอดคงเหลือจากกลุ่มนี้';
+
+  const btnLabel = iAmPayer ? '✓ จ่ายแล้ว' : '✓ ได้รับแล้ว';
+
+  return `
+    <div class="settlement-card glass">
+      <div class="settlement-parties">
+        <div class="settlement-user">
+          <img class="settlement-avatar" src="${leftUser.avatar}" alt="${escHtml(leftUser.name)}">
+          <span class="settlement-name">${escHtml(leftUser.name)}</span>
+        </div>
+        <div class="settlement-arrow">
+          <div class="arrow-line"></div>
+          <span class="settlement-amount">${SharePay.formatCurrency(entry.amount)}</span>
+        </div>
+        <div class="settlement-user">
+          <img class="settlement-avatar" src="${rightUser.avatar}" alt="${escHtml(rightUser.name)}">
+          <span class="settlement-name">${escHtml(rightUser.name)}</span>
+        </div>
+      </div>
+      <div class="settlement-group-meta">${entry.groupIcon} ${escHtml(entry.groupName)}</div>
+      <div class="settlement-items">${itemsLine}</div>
+      <div class="settlement-actions">
+        <button class="btn btn-primary" onclick="window.paySettlementDebt('${entry.groupId}','${entry.fromId}','${jsStr(entry.fromName)}','${entry.toId}','${jsStr(entry.toName)}',${entry.amount},${iAmPayer})">${btnLabel}</button>
+      </div>
+    </div>`;
+}
+
+function updateSettleBadge() {
+  if (!currentUser) return;
+  const { owe, owed } = getMyDebts(currentUser.id);
+  const count = owe.length + owed.length;
+  const badge = document.getElementById('settle-nav-badge');
+  if (badge) {
+    badge.textContent = count > 9 ? '9+' : String(count);
+    badge.style.display = count > 0 ? 'flex' : 'none';
+  }
+}
+
+function initSettleTabs() {
+  document.querySelectorAll('[data-settle-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-settle-tab]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.settleTab;
+      document.getElementById('settle-panel-pending')?.classList.toggle('active', tab === 'pending');
+      document.getElementById('settle-panel-history')?.classList.toggle('active', tab === 'history');
+    });
+  });
+}
+
+function renderSettlementsSection() {
+  if (!currentUser) return;
+  const { owe, owed } = getMyDebts(currentUser.id);
+  const totalOwe  = owe.reduce((s, e) => s + e.amount, 0);
+  const totalOwed = owed.reduce((s, e) => s + e.amount, 0);
+
+  const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setTxt('settle-total-owe', SharePay.formatCurrency(totalOwe));
+  setTxt('settle-total-owed', SharePay.formatCurrency(totalOwed));
+  setTxt('settle-pending-count', owe.length + owed.length);
+
+  // ----- Pending panel -----
+  const pendingContainer = document.getElementById('settlement-list');
+  if (pendingContainer) {
+    if (owe.length === 0 && owed.length === 0) {
+      pendingContainer.innerHTML = SharePay.emptyState('🤝', 'ไม่มีหนี้ที่รอชำระ', 'เยี่ยม! คุณไม่มีหนี้ค้างชำระ');
+    } else {
+      const oweHtml  = owe.length  ? `<h4 class="settle-group-title">💸 ที่ต้องจ่าย</h4>${owe.map(e => renderDebtCard(e, 'owe')).join('')}` : '';
+      const owedHtml = owed.length ? `<h4 class="settle-group-title">💰 ที่ต้องได้รับ</h4>${owed.map(e => renderDebtCard(e, 'owed')).join('')}` : '';
+      pendingContainer.innerHTML = oweHtml + owedHtml;
+    }
   }
 
-  container.innerHTML = settlements.map(s => {
-    const isFrom = s.fromId === currentUser.id;
-    const statusBadge = s.status === 'confirmed' ? '<span class="badge badge-success">ชำระแล้ว</span>' : '<span class="badge badge-warning">รอการยืนยัน</span>';
-    return `
-      <div class="settlement-row glass">
-        <div class="settlement-info">
-          <div>${isFrom ? '💸 จ่ายให้' : '💰 รับจาก'} <strong>${isFrom ? s.toName : s.fromName}</strong></div>
-          <div class="text-muted">${SharePay.formatDate(s.createdAt)}</div>
-        </div>
-        <div class="settlement-right">
-          <div class="settlement-amount ${isFrom ? 'negative' : 'positive'}">${isFrom ? '-' : '+'}${SharePay.formatCurrency(s.amount)}</div>
-          ${statusBadge}
-        </div>
-      </div>`;
-  }).join('');
+  // ----- History panel -----
+  const historyContainer = document.getElementById('settlement-history-list');
+  if (historyContainer) {
+    const history = window.SP.Settlements.getByMember(currentUser.id)
+      .filter(s => s.status === 'confirmed')
+      .sort((a, b) => (b.confirmedAt || b.createdAt).localeCompare(a.confirmedAt || a.createdAt));
+
+    if (history.length === 0) {
+      historyContainer.innerHTML = SharePay.emptyState('📜', 'ยังไม่มีประวัติการชำระเงิน');
+    } else {
+      historyContainer.innerHTML = history.map(s => {
+        const isFrom = s.fromId === currentUser.id;
+        return `
+          <div class="settlement-row glass">
+            <div class="settlement-info">
+              <div>${isFrom ? '💸 จ่ายให้' : '💰 รับจาก'} <strong>${escHtml(isFrom ? s.toName : s.fromName)}</strong></div>
+              <div class="text-muted">${SharePay.formatDate(s.confirmedAt || s.createdAt)}</div>
+            </div>
+            <div class="settlement-right">
+              <div class="settlement-amount ${isFrom ? 'negative' : 'positive'}">${isFrom ? '-' : '+'}${SharePay.formatCurrency(s.amount)}</div>
+              <span class="badge badge-success">จ่ายแล้ว</span>
+            </div>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  updateSettleBadge();
 }
+
+// Shared bookkeeping for "money changed hands": records the settlement,
+// notifies both members in-app, and pings the Discord webhook.
+function createSettlementRecord(groupId, fromId, fromName, toId, toName, amount) {
+  window.SP.Settlements.create({ groupId, fromId, fromName, toId, toName, amount, status: 'confirmed', confirmedAt: new Date().toISOString() });
+  window.SP.Notifications.create({ memberId: toId, type: 'payment_received', message: `${fromName} ชำระเงิน ${SharePay.formatCurrency(amount)} แล้ว ✅` });
+  if (fromId !== toId) {
+    window.SP.Notifications.create({ memberId: fromId, type: 'payment_sent', message: `คุณชำระเงิน ${SharePay.formatCurrency(amount)} ให้ ${toName} เรียบร้อยแล้ว ✅` });
+  }
+  const settledGroup = window.SP.Groups.getById(groupId);
+  window.Discord?.notifySettlement({ groupName: settledGroup?.name, fromName, toName, amount });
+}
+
+// Called from a group's debt list ("บันทึกการจ่าย")
+window.recordSettlement = function(groupId, fromId, fromName, toId, toName, amount) {
+  SharePay.confirmAction(
+    'ยืนยันการบันทึกชำระเงิน',
+    `บันทึกว่า "${fromName}" จ่ายให้ "${toName}" จำนวน ${SharePay.formatCurrency(amount)} ใช่หรือไม่?`,
+    () => {
+      createSettlementRecord(groupId, fromId, fromName, toId, toName, amount);
+      SharePay.showToast('บันทึกการชำระเงินเรียบร้อย ✅', 'success');
+      document.getElementById('group-detail-modal')?.classList.remove('active');
+      initDashboard();
+      renderSettlementsSection();
+    },
+    'primary'
+  );
+};
+
+// Called from the "การชำระหนี้" tab's "✓ จ่ายแล้ว / ✓ ได้รับแล้ว" button
+window.paySettlementDebt = function(groupId, fromId, fromName, toId, toName, amount, iAmPayer) {
+  const title = iAmPayer ? 'ยืนยันว่าจ่ายแล้ว' : 'ยืนยันว่าได้รับเงินแล้ว';
+  const message = iAmPayer
+    ? `ยืนยันว่าคุณจ่ายเงิน ${SharePay.formatCurrency(amount)} ให้ "${toName}" เรียบร้อยแล้วใช่ไหม?`
+    : `ยืนยันว่าคุณได้รับเงิน ${SharePay.formatCurrency(amount)} จาก "${fromName}" เรียบร้อยแล้วใช่ไหม?`;
+
+  SharePay.confirmAction(title, message, () => {
+    createSettlementRecord(groupId, fromId, fromName, toId, toName, amount);
+    SharePay.showToast('บันทึกการชำระเงินเรียบร้อย ✅ ย้ายไปหน้าประวัติแล้ว', 'success');
+    initDashboard();
+    renderSettlementsSection();
+  }, 'primary');
+};
 
 // ===== NOTIFICATIONS =====
 function renderNotifDropdown() {
