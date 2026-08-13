@@ -17,7 +17,7 @@ const EXPENSE_CATEGORIES = {
 let currentUser = null;
 
 // ===== INIT =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   currentUser = window.Auth.guard();
   if (!currentUser) return;
 
@@ -25,6 +25,21 @@ document.addEventListener('DOMContentLoaded', () => {
     SharePay.initTheme();
     SharePay.populateNavUser(currentUser);
     SharePay.updateNotifBell(currentUser.id);
+
+    // Pull the latest data from the cloud (friends, groups, other
+    // people's accounts, etc.) before rendering, so the dashboard
+    // reflects what's happened on other devices too.
+    try { await window.CloudSync?.pullAll(); } catch { /* offline — carry on with local data */ }
+
+    // currentUser may be stale after the pull (name/avatar/friendCode
+    // could have changed elsewhere) — refresh it from the DB and keep
+    // the session in sync.
+    const fresh = window.SP.Members.getById(currentUser.id);
+    if (fresh) {
+      const { password: _pw, ...safe } = fresh;
+      currentUser = safe;
+      window.Auth.setSession(safe);
+    }
 
     initDashboard();
     initNavigation();
@@ -681,15 +696,32 @@ window.openAddExpense = function(groupId) {
   modal.classList.add('active');
 };
 
-// Fill "ผู้จ่าย" (paid by) select and "หารกับ" (split with) checkboxes based on the selected group
+// Fill "ผู้จ่าย" (paid by) select and "หารกับ" (split with) checkboxes based on the selected group.
+// Friends are included too (even if they haven't been formally invited into
+// this group yet) so you don't have to invite someone before splitting a
+// bill with them — picking them here adds them to the group automatically
+// when the expense is saved (see submitExpense).
 function populateExpenseGroupDependentFields() {
   const groupId = document.getElementById('expense-group').value;
   const paidBySelect   = document.getElementById('expense-paidby');
   const memberSelector = document.getElementById('member-selector');
   const group = groupId ? window.SP.Groups.getById(groupId) : null;
-  const members = (group?.memberIds || []).map(id => window.SP.Members.getById(id)).filter(Boolean);
 
-  if (!group || members.length === 0) {
+  if (!group) {
+    paidBySelect.innerHTML = '<option value="">เลือกผู้จ่าย</option>';
+    memberSelector.innerHTML = '<p style="color: var(--text-tertiary); font-size: var(--text-sm);">เลือกกลุ่มก่อน</p>';
+    updateSplitPreview();
+    return;
+  }
+
+  const groupMemberIds = new Set(group.memberIds || []);
+  const groupMembers = (group.memberIds || []).map(id => window.SP.Members.getById(id)).filter(Boolean);
+  const friends = window.SP.FriendRequests.getFriends(currentUser.id)
+    .filter(f => !groupMemberIds.has(f.id));
+
+  const members = [...groupMembers, ...friends.map(f => ({ ...f, isFriendNotInGroup: true }))];
+
+  if (members.length === 0) {
     paidBySelect.innerHTML = '<option value="">เลือกผู้จ่าย</option>';
     memberSelector.innerHTML = '<p style="color: var(--text-tertiary); font-size: var(--text-sm);">เลือกกลุ่มก่อน</p>';
     updateSplitPreview();
@@ -697,7 +729,7 @@ function populateExpenseGroupDependentFields() {
   }
 
   paidBySelect.innerHTML = members.map(m =>
-    `<option value="${m.id}" ${m.id === currentUser.id ? 'selected' : ''}>${escHtml(m.name)}${m.isGuest ? ' (เพิ่มเอง)' : ''}</option>`).join('');
+    `<option value="${m.id}" ${m.id === currentUser.id ? 'selected' : ''}>${escHtml(m.name)}${m.isGuest ? ' (เพิ่มเอง)' : ''}${m.isFriendNotInGroup ? ' (เพื่อน)' : ''}</option>`).join('');
 
   memberSelector.innerHTML = members.map(m => `
     <label class="member-checkbox-item">
@@ -705,6 +737,7 @@ function populateExpenseGroupDependentFields() {
       <img class="member-checkbox-avatar" src="${m.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=3B82F6&color=fff`}" alt="${escHtml(m.name)}">
       <span class="member-checkbox-name">${escHtml(m.name)}</span>
       ${m.isGuest ? '<span class="member-checkbox-guest-tag">เพิ่มเอง</span>' : ''}
+      ${m.isFriendNotInGroup ? '<span class="member-checkbox-guest-tag">เพื่อน</span>' : ''}
     </label>`).join('');
 
   memberSelector.querySelectorAll('input[name="ae-member"]').forEach(cb => {
@@ -814,11 +847,20 @@ function submitExpense(e) {
   if (checked.length === 0) { SharePay.showToast('เลือกสมาชิกอย่างน้อย 1 คน', 'error'); return; }
 
   const paidByMember     = window.SP.Members.getById(paidById);
-  const group            = window.SP.Groups.getById(groupId);
+  let   group            = window.SP.Groups.getById(groupId);
   const catInfo           = EXPENSE_CATEGORIES[category] || EXPENSE_CATEGORIES.other;
   const splitMemberIds   = checked.map(c => c.value);
   const splitMemberNames = checked.map(c => c.dataset.name);
   const splitAmount      = amount / splitMemberIds.length;
+
+  // Anyone picked as payer/split who's a friend but not yet a formal member
+  // of this group (see populateExpenseGroupDependentFields) gets added to
+  // the group now, so balances/settlements work correctly going forward.
+  const currentMemberIds = new Set(group?.memberIds || []);
+  const idsToAdd = [...new Set([paidById, ...splitMemberIds])].filter(id => !currentMemberIds.has(id));
+  if (idsToAdd.length > 0) {
+    group = window.SP.Groups.update(groupId, { memberIds: [...(group?.memberIds || []), ...idsToAdd] });
+  }
 
   const expense = window.SP.Expenses.create({
     groupId, title, category, amount, note, date,
@@ -915,17 +957,27 @@ function initFriendsFeature() {
   updateFriendsEntryBadge();
 }
 
-function openFriendsModal() {
+async function openFriendsModal() {
   switchFriendsTab('friends');
   document.getElementById('friends-modal')?.classList.add('active');
+  // Refresh from the cloud so requests/friends made on another device show up.
+  try { await window.CloudSync?.pullAll(); } catch { /* offline — keep showing local data */ }
+  const activeTab = document.querySelector('#friends-modal [data-friends-tab].active')?.dataset.friendsTab;
+  if (activeTab) switchFriendsTab(activeTab);
+  updateFriendsEntryBadge();
 }
 
-function switchFriendsTab(tab) {
+async function switchFriendsTab(tab) {
   document.querySelectorAll('#friends-modal [data-friends-tab]').forEach(b => b.classList.toggle('active', b.dataset.friendsTab === tab));
   document.querySelectorAll('#friends-modal .friends-tab-panel').forEach(p => p.classList.toggle('active', p.id === `friends-panel-${tab}`));
   if (tab === 'friends') renderFriendsList();
   if (tab === 'requests') renderFriendRequestsList();
-  if (tab === 'search') { renderMyFriendCode(); renderFriendSearchResults(); }
+  if (tab === 'search') {
+    renderMyFriendCode();
+    renderFriendSearchResults();
+    // Search should include accounts registered on other devices too.
+    try { await window.CloudSync?.pullAll(); renderFriendSearchResults(); } catch { /* offline */ }
+  }
 }
 
 function renderMyFriendCode() {
