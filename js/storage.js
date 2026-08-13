@@ -1,378 +1,650 @@
-/**
- * SharePay - Local Storage Manager
- * All app data stored in localStorage; synced to Google Sheets on write.
- */
+<!DOCTYPE html>
+<html lang="th" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0EA5E9">
+  <title>Dashboard – SharePay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/member.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
 
-const DB_KEY = "sharepay_db";
+<!-- Page Loader -->
+<div class="loading-overlay" id="page-loader">
+  <svg width="48" height="48" viewBox="0 0 32 32" fill="none" class="loading-logo">
+    <rect width="32" height="32" rx="10" fill="url(#g1)"/>
+    <path d="M8 20L14 12L19 17L24 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="24" cy="10" r="2" fill="white"/>
+    <defs><linearGradient id="g1" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs>
+  </svg>
+  <div class="spinner"></div>
+</div>
 
-function getDB() {
-  try {
-    const db = JSON.parse(localStorage.getItem(DB_KEY)) || initDB();
-    // Backward-compat: fill in any tables that didn't exist in older saved DBs
-    let changed = false;
-    ['members', 'groups', 'expenses', 'settlements', 'notifications', 'friendRequests', 'groupInvites'].forEach(key => {
-      if (!Array.isArray(db[key])) { db[key] = []; changed = true; }
-    });
-    if (changed) saveDB(db);
-    return db;
-  }
-  catch { return initDB(); }
-}
+<div class="member-layout">
+  <!-- ===== HEADER ===== -->
+  <header class="member-header">
+    <div class="member-header-logo">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="10" fill="url(#gh)"/>
+        <path d="M8 20L14 12L19 17L24 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="24" cy="10" r="2" fill="white"/>
+        <defs><linearGradient id="gh" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs>
+      </svg>
+      SharePay
+    </div>
 
-function initDB() {
-  const db = { members: [], groups: [], expenses: [], settlements: [], notifications: [], friendRequests: [], groupInvites: [] };
-  saveDB(db);
-  return db;
-}
+    <div class="member-header-actions">
+      <!-- Theme Toggle -->
+      <button class="btn-icon" id="theme-toggle" title="สลับโหมด">🌙</button>
 
-function saveDB(db) {
-  localStorage.setItem(DB_KEY, JSON.stringify(db));
-}
+      <!-- Friends -->
+      <div class="notif-bell" id="friends-entry">
+        <button class="btn-icon" id="friends-toggle" title="เพื่อน">👫</button>
+        <span class="notif-badge" id="friends-entry-badge" style="display:none">0</span>
+      </div>
 
-function genId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
+      <!-- Notification Bell -->
+      <div class="notif-bell" id="notif-bell">
+        <button class="btn-icon" id="notif-toggle">🔔</button>
+        <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+        <div class="notif-dropdown" id="notif-dropdown">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--space-3);">
+            <strong style="font-size: var(--text-sm);">การแจ้งเตือน</strong>
+            <button class="btn btn-ghost btn-sm" id="mark-all-read-btn">อ่านทั้งหมด</button>
+          </div>
+          <div id="notif-items"><p class="notif-empty">ไม่มีการแจ้งเตือน</p></div>
+        </div>
+      </div>
 
-// ===== MEMBERS =====
-const Members = {
-  getAll() { return getDB().members; },
-  getById(id) { return getDB().members.find(m => m.id === id); },
-  getByEmail(email) { return getDB().members.find(m => m.email.toLowerCase() === email.toLowerCase()); },
+      <!-- Profile -->
+      <div style="position: relative;">
+        <img
+          src="https://ui-avatars.com/api/?name=User&background=0EA5E9&color=fff&size=64"
+          alt="Profile"
+          class="member-avatar-btn"
+          id="user-avatar"
+          id="profile-trigger"
+        >
+        <div class="profile-dropdown" id="profile-dropdown">
+          <div style="padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-2);">
+            <div style="font-weight: 600; font-size: var(--text-sm);" id="dropdown-name">ผู้ใช้</div>
+            <div style="font-size: var(--text-xs); color: var(--text-tertiary);" id="dropdown-role">Member</div>
+          </div>
+          <a href="#" class="dropdown-item" id="profile-link">👤 โปรไฟล์</a>
+          <a href="#" class="dropdown-item" id="settings-link">⚙️ ตั้งค่า</a>
+          <div class="dropdown-divider"></div>
+          <a href="#" class="dropdown-item danger" id="member-logout-btn">🚪 ออกจากระบบ</a>
+        </div>
+      </div>
+    </div>
+  </header>
 
-  create(data) {
-    const db = getDB();
-    const member = { id: genId(), createdAt: new Date().toISOString(), ...data };
-    db.members.push(member);
-    saveDB(db);
-    SheetsAPI.createRow(SHEET_NAMES.members, member).catch(() => {});
-    return member;
-  },
+  <!-- ===== CONTENT ===== -->
+  <main class="member-content">
 
-  update(id, data) {
-    const db = getDB();
-    const idx = db.members.findIndex(m => m.id === id);
-    if (idx === -1) return null;
-    db.members[idx] = { ...db.members[idx], ...data, updatedAt: new Date().toISOString() };
-    saveDB(db);
-    SheetsAPI.updateRow(SHEET_NAMES.members, id, db.members[idx]).catch(() => {});
-    return db.members[idx];
-  },
+    <!-- ===== HOME SECTION ===== -->
+    <section class="member-section active" id="section-home">
 
-  delete(id) {
-    const db = getDB();
-    db.members = db.members.filter(m => m.id !== id);
-    saveDB(db);
-    SheetsAPI.deleteRow(SHEET_NAMES.members, id).catch(() => {});
-  },
+      <!-- Greeting -->
+      <div style="margin-bottom: var(--space-5);">
+        <p style="color: var(--text-tertiary); font-size: var(--text-sm);">สวัสดี 👋</p>
+        <h1 style="font-size: var(--text-2xl); font-weight: 800; letter-spacing: -0.03em;" id="user-name">กำลังโหลด...</h1>
+      </div>
 
-  // Search real (non-guest) accounts by Username / ชื่อเล่น (name) / User ID / email
-  search(query, excludeId) {
-    const q = String(query || '').trim().toLowerCase();
-    if (!q) return [];
-    return getDB().members.filter(m => {
-      if (m.id === excludeId) return false;
-      if (m.isGuest) return false;
-      return (
-        m.id.toLowerCase().includes(q) ||
-        (m.name || '').toLowerCase().includes(q) ||
-        (m.username || '').toLowerCase().includes(q) ||
-        (m.email || '').toLowerCase().includes(q)
-      );
-    }).slice(0, 20);
-  }
-};
+      <!-- Balance Hero -->
+      <div class="balance-hero slide-up">
+        <div class="balance-hero-label">ยอดสุทธิของฉัน</div>
+        <div class="balance-hero-amount" id="net-balance">฿0</div>
+        <div class="balance-hero-sub" id="balance-status">กำลังคำนวณ...</div>
+      </div>
 
-// ===== GROUPS =====
-const Groups = {
-  getAll() { return getDB().groups; },
-  getById(id) { return getDB().groups.find(g => g.id === id); },
-  getByMember(memberId) { return getDB().groups.filter(g => (g.memberIds || []).includes(memberId)); },
+      <!-- Balance Cards -->
+      <div class="balance-cards stagger">
+        <div class="balance-card owed">
+          <div class="balance-card-icon">📥</div>
+          <div class="balance-card-label">คนอื่นติดเรา</div>
+          <div class="balance-card-amount" id="total-owed">฿0</div>
+        </div>
+        <div class="balance-card owing">
+          <div class="balance-card-icon">📤</div>
+          <div class="balance-card-label">เราติดคนอื่น</div>
+          <div class="balance-card-amount" id="total-owing">฿0</div>
+        </div>
+      </div>
 
-  create(data) {
-    const db = getDB();
-    const group = { id: genId(), createdAt: new Date().toISOString(), totalExpenses: 0, ...data };
-    db.groups.push(group);
-    saveDB(db);
-    SheetsAPI.createRow(SHEET_NAMES.groups, { ...group, memberIds: (group.memberIds || []).join(',') }).catch(() => {});
-    return group;
-  },
+      <!-- Stats Strip -->
+      <div class="stats-strip stagger">
+        <div class="stat-strip-item">
+          <div class="stat-strip-value" id="monthly-expense">฿0</div>
+          <div class="stat-strip-label">เดือนนี้</div>
+        </div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-value" id="group-count">0</div>
+          <div class="stat-strip-label">กลุ่มของฉัน</div>
+        </div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-value" id="expense-count">0</div>
+          <div class="stat-strip-label">รายการ</div>
+        </div>
+      </div>
 
-  update(id, data) {
-    const db = getDB();
-    const idx = db.groups.findIndex(g => g.id === id);
-    if (idx === -1) return null;
-    db.groups[idx] = { ...db.groups[idx], ...data, updatedAt: new Date().toISOString() };
-    saveDB(db);
-    SheetsAPI.updateRow(SHEET_NAMES.groups, id, { ...db.groups[idx], memberIds: (db.groups[idx].memberIds || []).join(',') }).catch(() => {});
-    return db.groups[idx];
-  },
+      <!-- Recent Groups -->
+      <div class="member-section-header">
+        <h2 class="member-section-title">กลุ่มล่าสุด</h2>
+        <button class="btn btn-ghost btn-sm" id="view-all-groups-btn">ดูทั้งหมด</button>
+      </div>
+      <div class="groups-list" id="recent-groups">
+        <div class="empty-state"><div class="spinner"></div></div>
+      </div>
 
-  delete(id) {
-    const db = getDB();
-    db.groups = db.groups.filter(g => g.id !== id);
-    db.expenses = db.expenses.filter(e => e.groupId !== id);
-    db.settlements = db.settlements.filter(s => s.groupId !== id);
-    saveDB(db);
-    SheetsAPI.deleteRow(SHEET_NAMES.groups, id).catch(() => {});
-  }
-};
+      <!-- Recent Expenses -->
+      <div class="member-section-header" style="margin-top: var(--space-6);">
+        <h2 class="member-section-title">ค่าใช้จ่ายล่าสุด</h2>
+        <button class="btn btn-ghost btn-sm" id="view-all-expenses-btn">ดูทั้งหมด</button>
+      </div>
+      <div class="expenses-list" id="recent-expenses">
+        <div class="empty-state"><div class="spinner"></div></div>
+      </div>
 
-// ===== EXPENSES =====
-const Expenses = {
-  getAll() { return getDB().expenses; },
-  getById(id) { return getDB().expenses.find(e => e.id === id); },
-  getByGroup(groupId) { return getDB().expenses.filter(e => e.groupId === groupId).sort((a,b) => b.createdAt.localeCompare(a.createdAt)); },
-  getByMember(memberId) { return getDB().expenses.filter(e => (e.splitMemberIds || []).includes(memberId) || e.paidById === memberId); },
+    </section>
 
-  create(data) {
-    const db = getDB();
-    const expense = { id: genId(), createdAt: new Date().toISOString(), ...data };
-    db.expenses.push(expense);
-    // update group total
-    const gIdx = db.groups.findIndex(g => g.id === data.groupId);
-    if (gIdx !== -1) { db.groups[gIdx].totalExpenses = (db.groups[gIdx].totalExpenses || 0) + data.amount; db.groups[gIdx].lastActivity = new Date().toISOString(); }
-    saveDB(db);
-    SheetsAPI.createRow(SHEET_NAMES.expenses, { ...expense, splitMemberIds: (expense.splitMemberIds || []).join(','), splitMemberNames: (expense.splitMemberNames || []).join(',') }).catch(() => {});
-    return expense;
-  },
+    <!-- ===== GROUPS SECTION ===== -->
+    <section class="member-section" id="section-groups">
+      <div class="member-section-header">
+        <h2 class="member-section-title">กลุ่มของฉัน</h2>
+        <button class="btn btn-primary btn-sm" id="create-group-btn">+ สร้างกลุ่ม</button>
+      </div>
+      <div class="groups-list" id="all-groups-list">
+        <div class="empty-state">
+          <span class="empty-icon">👥</span>
+          <p>ยังไม่มีกลุ่ม</p>
+          <button class="btn btn-primary" onclick="document.getElementById('create-group-modal').classList.add('active')">สร้างกลุ่มแรก</button>
+        </div>
+      </div>
+    </section>
 
-  update(id, data) {
-    const db = getDB();
-    const idx = db.expenses.findIndex(e => e.id === id);
-    if (idx === -1) return null;
-    db.expenses[idx] = { ...db.expenses[idx], ...data, updatedAt: new Date().toISOString() };
-    saveDB(db);
-    SheetsAPI.updateRow(SHEET_NAMES.expenses, id, db.expenses[idx]).catch(() => {});
-    return db.expenses[idx];
-  },
+    <!-- ===== EXPENSES SECTION ===== -->
+    <section class="member-section" id="section-expenses">
+      <div class="member-section-header">
+        <h2 class="member-section-title">ค่าใช้จ่ายของฉัน</h2>
+      </div>
 
-  delete(id) {
-    const db = getDB();
-    const expense = db.expenses.find(e => e.id === id);
-    if (expense) {
-      const gIdx = db.groups.findIndex(g => g.id === expense.groupId);
-      if (gIdx !== -1) db.groups[gIdx].totalExpenses = Math.max(0, (db.groups[gIdx].totalExpenses || 0) - expense.amount);
+      <!-- Filter -->
+      <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-4); overflow-x: auto; padding-bottom: var(--space-2);">
+        <button class="filter-btn active" data-cat="">ทั้งหมด</button>
+        <button class="filter-btn" data-cat="food">🍜 อาหาร</button>
+        <button class="filter-btn" data-cat="fuel">⛽ น้ำมัน</button>
+        <button class="filter-btn" data-cat="accommodation">🏨 ที่พัก</button>
+        <button class="filter-btn" data-cat="transport">🚌 เดินทาง</button>
+        <button class="filter-btn" data-cat="drinks">🥤 เครื่องดื่ม</button>
+        <button class="filter-btn" data-cat="other">📦 อื่นๆ</button>
+      </div>
+
+      <div class="expenses-list" id="all-expenses-list">
+        <div class="empty-state">
+          <span class="empty-icon">💸</span>
+          <p>ยังไม่มีค่าใช้จ่าย</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SETTLEMENT SECTION ===== -->
+    <section class="member-section" id="section-settle">
+      <div class="member-section-header">
+        <h2 class="member-section-title">การชำระหนี้</h2>
+      </div>
+
+      <!-- Summary -->
+      <div class="settle-summary">
+        <div class="balance-card owing">
+          <div class="balance-card-icon">📤</div>
+          <div class="balance-card-label">เราต้องจ่าย</div>
+          <div class="balance-card-amount" id="settle-total-owe">฿0</div>
+        </div>
+        <div class="balance-card owed">
+          <div class="balance-card-icon">📥</div>
+          <div class="balance-card-label">คนอื่นต้องจ่ายเรา</div>
+          <div class="balance-card-amount" id="settle-total-owed">฿0</div>
+        </div>
+        <div class="balance-card">
+          <div class="balance-card-icon">🧾</div>
+          <div class="balance-card-label">รายการค้างชำระ</div>
+          <div class="balance-card-amount" id="settle-pending-count">0</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-5);">
+        <button class="filter-btn active" data-settle-tab="pending">รอชำระ</button>
+        <button class="filter-btn" data-settle-tab="history">ประวัติ</button>
+      </div>
+
+      <!-- Pending -->
+      <div class="settle-tab-panel active" id="settle-panel-pending">
+        <div class="settlement-list" id="settlement-list">
+          <div class="empty-state">
+            <span class="empty-icon">🤝</span>
+            <p>ไม่มีหนี้ที่รอชำระ</p>
+            <p style="font-size: var(--text-xs); color: var(--text-tertiary);">เยี่ยม! คุณไม่มีหนี้ค้างชำระ</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="settle-tab-panel" id="settle-panel-history">
+        <div class="settlement-list" id="settlement-history-list">
+          <div class="empty-state">
+            <span class="empty-icon">📜</span>
+            <p>ยังไม่มีประวัติการชำระเงิน</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PROFILE SECTION ===== -->
+    <section class="member-section" id="section-profile">
+      <div style="text-align: center; padding: var(--space-8) 0;">
+        <div style="position: relative; display: inline-block; margin-bottom: var(--space-5);">
+          <img
+            src="https://ui-avatars.com/api/?name=User&background=0EA5E9&color=fff&size=200"
+            alt="Profile"
+            style="width: 96px; height: 96px; border-radius: 50%; border: 4px solid var(--primary); object-fit: cover;"
+            id="profile-avatar-big"
+          >
+          <button class="btn-icon" style="position: absolute; bottom: 0; right: 0; background: var(--primary); color: white;" id="change-avatar-btn">📷</button>
+        </div>
+        <h2 style="font-size: var(--text-xl); font-weight: 800; margin-bottom: 4px;" id="profile-name">กำลังโหลด...</h2>
+        <p style="color: var(--text-tertiary); font-size: var(--text-sm); margin-bottom: var(--space-6);" id="profile-email">...</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+        <div class="glass-card" style="padding: var(--space-5);">
+          <h3 style="font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-4);">แก้ไขโปรไฟล์</h3>
+          <form id="profile-form" style="display: flex; flex-direction: column; gap: var(--space-4);">
+            <div class="form-group">
+              <label class="form-label">ชื่อ</label>
+              <input type="text" class="form-input" id="profile-name-input" placeholder="ชื่อของคุณ">
+            </div>
+            <button type="submit" class="btn btn-primary">💾 บันทึก</button>
+          </form>
+        </div>
+
+        <div class="glass-card" style="padding: var(--space-5);">
+          <h3 style="font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-4);">เปลี่ยนรหัสผ่าน</h3>
+          <form id="password-form" style="display: flex; flex-direction: column; gap: var(--space-4);">
+            <div class="form-group">
+              <label class="form-label">รหัสผ่านใหม่</label>
+              <input type="password" class="form-input" placeholder="รหัสผ่านใหม่">
+            </div>
+            <div class="form-group">
+              <label class="form-label">ยืนยันรหัสผ่านใหม่</label>
+              <input type="password" class="form-input" placeholder="พิมพ์อีกครั้ง">
+            </div>
+            <button type="submit" class="btn btn-secondary">🔑 เปลี่ยนรหัสผ่าน</button>
+          </form>
+        </div>
+
+        <button class="btn btn-danger w-full" id="member-logout-btn-2">🚪 ออกจากระบบ</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="member-bottom-nav">
+    <button class="bottom-nav-item active" data-section="home">
+      <span class="bottom-nav-icon">🏠</span>
+      <span class="bottom-nav-label">หน้าหลัก</span>
+    </button>
+    <button class="bottom-nav-item" data-section="groups">
+      <span class="bottom-nav-icon">👥</span>
+      <span class="bottom-nav-label">กลุ่ม</span>
+    </button>
+    <button class="bottom-nav-item" data-section="expenses">
+      <span class="bottom-nav-icon">💸</span>
+      <span class="bottom-nav-label">รายจ่าย</span>
+    </button>
+    <button class="bottom-nav-item" data-section="settle">
+      <span class="bottom-nav-icon">✅<span class="bottom-nav-badge" id="settle-nav-badge">0</span></span>
+      <span class="bottom-nav-label">ชำระ</span>
+    </button>
+    <button class="bottom-nav-item" data-section="profile">
+      <span class="bottom-nav-icon">👤</span>
+      <span class="bottom-nav-label">โปรไฟล์</span>
+    </button>
+  </nav>
+</div>
+
+<!-- FAB - Add Expense -->
+<button class="fab" id="fab-add-expense" title="เพิ่มค่าใช้จ่าย">+</button>
+
+<!-- ===== CREATE GROUP MODAL ===== -->
+<div class="modal-overlay" id="create-group-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">สร้างกลุ่มใหม่ 👥</h3>
+      <button class="modal-close" onclick="document.getElementById('create-group-modal').classList.remove('active')">✕</button>
+    </div>
+    <form id="create-group-form" style="display: flex; flex-direction: column; gap: var(--space-5);">
+      <div class="form-group">
+        <label class="form-label">ชื่อกลุ่ม *</label>
+        <input type="text" id="group-name" class="form-input" placeholder="เช่น ทริปเที่ยวทะเล" required maxlength="50">
+      </div>
+      <div class="form-group">
+        <label class="form-label">คำอธิบาย</label>
+        <textarea id="group-desc" class="form-textarea" placeholder="รายละเอียดกลุ่ม (ไม่บังคับ)" rows="2"></textarea>
+      </div>
+      <div style="display: flex; gap: var(--space-3);">
+        <button type="button" class="btn btn-secondary" style="flex:1" onclick="document.getElementById('create-group-modal').classList.remove('active')">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary" style="flex:2">✨ สร้างกลุ่ม</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== ADD EXPENSE MODAL ===== -->
+<div class="modal-overlay" id="add-expense-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">เพิ่มค่าใช้จ่าย 💸</h3>
+      <button class="modal-close" onclick="document.getElementById('add-expense-modal').classList.remove('active')">✕</button>
+    </div>
+
+    <form id="add-expense-form" class="expense-form">
+      <!-- Group Select -->
+      <div class="form-group">
+        <label class="form-label">กลุ่ม *</label>
+        <select id="expense-group" class="form-select" required>
+          <option value="">เลือกกลุ่ม</option>
+        </select>
+      </div>
+
+      <!-- Title -->
+      <div class="form-group">
+        <label class="form-label">ชื่อรายการ *</label>
+        <input type="text" id="expense-title" class="form-input" placeholder="เช่น ค่าอาหารกลางวัน" required>
+      </div>
+
+      <!-- Category -->
+      <div class="form-group">
+        <label class="form-label">หมวดหมู่ *</label>
+        <div class="category-grid" id="category-grid">
+          <button type="button" class="category-btn selected" data-cat="food">
+            <span class="cat-icon">🍜</span>
+            <span>อาหาร</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="fuel">
+            <span class="cat-icon">⛽</span>
+            <span>น้ำมัน</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="accommodation">
+            <span class="cat-icon">🏨</span>
+            <span>ที่พัก</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="transport">
+            <span class="cat-icon">🚌</span>
+            <span>เดินทาง</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="drinks">
+            <span class="cat-icon">🥤</span>
+            <span>เครื่องดื่ม</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="entertainment">
+            <span class="cat-icon">🎭</span>
+            <span>บันเทิง</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="shopping">
+            <span class="cat-icon">🛍️</span>
+            <span>ช้อปปิ้ง</span>
+          </button>
+          <button type="button" class="category-btn" data-cat="other">
+            <span class="cat-icon">📦</span>
+            <span>อื่นๆ</span>
+          </button>
+        </div>
+        <input type="hidden" id="expense-category" value="food">
+      </div>
+
+      <!-- Amount -->
+      <div class="form-group">
+        <label class="form-label">จำนวนเงิน (บาท) *</label>
+        <div class="form-input-icon">
+          <span class="input-icon" style="font-size: 0.875rem; color: var(--primary); font-weight: 700;">฿</span>
+          <input type="number" id="expense-amount" class="form-input" placeholder="0.00" min="0" step="0.01" required>
+        </div>
+      </div>
+
+      <!-- Paid By -->
+      <div class="form-group">
+        <label class="form-label">ผู้จ่าย *</label>
+        <select id="expense-paidby" class="form-select" required>
+          <option value="">เลือกผู้จ่าย</option>
+        </select>
+      </div>
+
+      <!-- Add a custom (guest) person, used by both "ผู้จ่าย" and "หารกับ" -->
+      <div class="form-group" id="add-custom-member-group">
+        <button type="button" class="btn-add-custom-member" id="show-add-member-btn">
+          <span>➕</span> เพิ่มชื่อคนใหม่ (ไม่ต้องมีบัญชี)
+        </button>
+        <div class="add-member-inline-row" id="add-member-inline">
+          <input type="text" id="new-member-name" class="form-input" placeholder="พิมพ์ชื่อ เช่น เพื่อนแขก" maxlength="40">
+          <button type="button" class="btn btn-secondary btn-sm" id="cancel-add-member-btn">ยกเลิก</button>
+          <button type="button" class="btn btn-primary btn-sm" id="confirm-add-member-btn">เพิ่ม</button>
+        </div>
+      </div>
+
+      <!-- Split Members -->
+      <div class="form-group">
+        <label class="form-label">หารกับ *</label>
+        <div class="member-selector" id="member-selector">
+          <p style="color: var(--text-tertiary); font-size: var(--text-sm);">เลือกกลุ่มก่อน</p>
+        </div>
+      </div>
+
+      <!-- Split Preview -->
+      <div class="split-preview" id="split-preview" style="display:none">
+        <div class="split-preview-title">สรุปการหาร</div>
+        <div id="split-preview-items"></div>
+      </div>
+
+      <!-- Date -->
+      <div class="form-group">
+        <label class="form-label">วันที่</label>
+        <input type="date" id="expense-date" class="form-input">
+      </div>
+
+      <!-- Note -->
+      <div class="form-group">
+        <label class="form-label">หมายเหตุ</label>
+        <textarea id="expense-note" class="form-textarea" placeholder="หมายเหตุ (ไม่บังคับ)" rows="2"></textarea>
+      </div>
+
+      <!-- Receipt -->
+      <div class="form-group">
+        <label class="form-label">รูปใบเสร็จ</label>
+        <input type="file" id="expense-receipt" accept="image/*" style="display:none">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('expense-receipt').click()">
+          📷 แนบใบเสร็จ
+        </button>
+        <div id="receipt-preview" style="display:none; margin-top: var(--space-2);">
+          <img id="receipt-img" src="" alt="Receipt" style="max-height: 120px; border-radius: var(--radius-md); object-fit: cover;">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: var(--space-3); padding-top: var(--space-2);">
+        <button type="button" class="btn btn-secondary" style="flex:1" onclick="document.getElementById('add-expense-modal').classList.remove('active')">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary" style="flex:2" id="add-expense-submit">
+          💸 เพิ่มค่าใช้จ่าย
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== FRIENDS MODAL ===== -->
+<div class="modal-overlay" id="friends-modal">
+  <div class="modal" style="max-width:480px;width:95vw;max-height:85vh;overflow-y:auto;">
+    <div class="modal-header">
+      <h3 class="modal-title">เพื่อน 👫</h3>
+      <button class="modal-close" onclick="document.getElementById('friends-modal').classList.remove('active')">✕</button>
+    </div>
+    <div style="padding: 0 var(--space-5) var(--space-5);">
+      <div class="friends-tabs">
+        <button class="filter-btn active" data-friends-tab="friends">เพื่อนของฉัน</button>
+        <button class="filter-btn" data-friends-tab="requests">คำขอ <span class="badge badge-danger" id="friend-requests-count" style="display:none">0</span></button>
+        <button class="filter-btn" data-friends-tab="search">ค้นหา</button>
+      </div>
+
+      <!-- My Friends -->
+      <div class="friends-tab-panel active" id="friends-panel-friends">
+        <div id="friends-list"></div>
+      </div>
+
+      <!-- Incoming Requests -->
+      <div class="friends-tab-panel" id="friends-panel-requests">
+        <div id="friend-requests-list"></div>
+      </div>
+
+      <!-- Search -->
+      <div class="friends-tab-panel" id="friends-panel-search">
+        <div class="friend-code-box">
+          <div class="friend-code-row">
+            <div>
+              <div class="text-muted" style="font-size: var(--text-xs);">โค้ดเพื่อนของฉัน</div>
+              <div class="friend-code-value" id="my-friend-code">-----</div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="regen-friend-code-btn">🔀 สุ่มโค้ดใหม่</button>
+          </div>
+          <div class="friend-code-add-row">
+            <input type="text" id="friend-code-input" class="form-input" placeholder="กรอกโค้ดเพื่อน (5 ตัวอักษร)" maxlength="5">
+            <button type="button" class="btn btn-primary btn-sm" id="add-by-code-btn">เพิ่มเพื่อน</button>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top: var(--space-4);">
+          <input type="search" id="friend-search-input" class="form-input" placeholder="หรือค้นหาด้วย Username, ชื่อเล่น หรือ User ID">
+        </div>
+        <div id="friend-search-results"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== INVITE TO GROUP MODAL ===== -->
+<div class="modal-overlay" id="invite-group-modal">
+  <div class="modal" style="max-width:440px;width:95vw;max-height:80vh;overflow-y:auto;">
+    <div class="modal-header">
+      <h3 class="modal-title">เชิญเพื่อนเข้ากลุ่ม 👫</h3>
+      <button class="modal-close" onclick="document.getElementById('invite-group-modal').classList.remove('active')">✕</button>
+    </div>
+    <div style="padding: var(--space-5);">
+      <div id="invite-group-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+  // Bottom Nav clicks are handled by initNavigation() in js/member.js
+  // (it drives both the active-state toggling and section rendering).
+
+  // FAB → Add Expense
+  document.getElementById('fab-add-expense').addEventListener('click', () => {
+    window.openAddExpense();
+  });
+
+  // Notification Bell
+  document.getElementById('notif-toggle').addEventListener('click', () => {
+    document.getElementById('notif-bell').classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#notif-bell')) document.getElementById('notif-bell').classList.remove('open');
+  });
+
+  // Profile Dropdown
+  document.getElementById('user-avatar').addEventListener('click', () => {
+    document.getElementById('profile-dropdown').classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#user-avatar') && !e.target.closest('#profile-dropdown')) {
+      document.getElementById('profile-dropdown').classList.remove('open');
     }
-    db.expenses = db.expenses.filter(e => e.id !== id);
-    saveDB(db);
-    SheetsAPI.deleteRow(SHEET_NAMES.expenses, id).catch(() => {});
-  }
-};
+  });
 
-// ===== SETTLEMENTS =====
-const Settlements = {
-  getAll() { return getDB().settlements; },
-  getByGroup(groupId) { return getDB().settlements.filter(s => s.groupId === groupId); },
-  getByMember(memberId) { return getDB().settlements.filter(s => s.fromId === memberId || s.toId === memberId); },
-
-  create(data) {
-    const db = getDB();
-    const s = { id: genId(), createdAt: new Date().toISOString(), status: 'pending', ...data };
-    db.settlements.push(s);
-    saveDB(db);
-    SheetsAPI.createRow(SHEET_NAMES.settlements, s).catch(() => {});
-    return s;
-  },
-
-  update(id, data) {
-    const db = getDB();
-    const idx = db.settlements.findIndex(s => s.id === id);
-    if (idx === -1) return null;
-    db.settlements[idx] = { ...db.settlements[idx], ...data, updatedAt: new Date().toISOString() };
-    saveDB(db);
-    SheetsAPI.updateRow(SHEET_NAMES.settlements, id, db.settlements[idx]).catch(() => {});
-    return db.settlements[idx];
-  }
-};
-
-// ===== NOTIFICATIONS =====
-const Notifications = {
-  getByMember(memberId) { return getDB().notifications.filter(n => n.memberId === memberId).sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,50); },
-  getUnreadCount(memberId) { return getDB().notifications.filter(n => n.memberId === memberId && !n.isRead).length; },
-
-  create(data) {
-    const db = getDB();
-    const n = { id: genId(), createdAt: new Date().toISOString(), isRead: false, ...data };
-    db.notifications.push(n);
-    saveDB(db);
-    return n;
-  },
-
-  markRead(id) {
-    const db = getDB();
-    const idx = db.notifications.findIndex(n => n.id === id);
-    if (idx !== -1) { db.notifications[idx].isRead = true; saveDB(db); }
-  },
-
-  markAllRead(memberId) {
-    const db = getDB();
-    db.notifications.forEach(n => { if (n.memberId === memberId) n.isRead = true; });
-    saveDB(db);
-  }
-};
-
-// ===== FRIEND REQUESTS =====
-const FriendRequests = {
-  getAll() { return getDB().friendRequests; },
-  getById(id) { return getDB().friendRequests.find(r => r.id === id); },
-
-  // Any existing request (pending/accepted/rejected) between the two users, in either direction
-  getBetween(aId, bId) {
-    return getDB().friendRequests.find(r =>
-      (r.fromId === aId && r.toId === bId) || (r.fromId === bId && r.toId === aId));
-  },
-
-  getIncomingPending(memberId) {
-    return getDB().friendRequests.filter(r => r.toId === memberId && r.status === 'pending');
-  },
-
-  getFriends(memberId) {
-    const ids = getDB().friendRequests
-      .filter(r => r.status === 'accepted' && (r.fromId === memberId || r.toId === memberId))
-      .map(r => (r.fromId === memberId ? r.toId : r.fromId));
-    return ids.map(id => Members.getById(id)).filter(Boolean);
-  },
-
-  areFriends(aId, bId) {
-    const r = this.getBetween(aId, bId);
-    return !!r && r.status === 'accepted';
-  },
-
-  // 'none' | 'friends' | 'pending_sent' (aId sent to bId) | 'pending_received' (bId sent to aId)
-  statusBetween(aId, bId) {
-    const r = this.getBetween(aId, bId);
-    if (!r || r.status === 'rejected') return 'none';
-    if (r.status === 'accepted') return 'friends';
-    return r.fromId === aId ? 'pending_sent' : 'pending_received';
-  },
-
-  send(fromId, toId) {
-    if (!fromId || !toId) return { ok: false, error: 'ข้อมูลไม่ถูกต้อง' };
-    if (fromId === toId) return { ok: false, error: 'ไม่สามารถเพิ่มตัวเองเป็นเพื่อนได้' };
-
-    const db = getDB();
-    const existing = db.friendRequests.find(r =>
-      (r.fromId === fromId && r.toId === toId) || (r.fromId === toId && r.toId === fromId));
-
-    if (existing) {
-      if (existing.status === 'accepted') return { ok: false, error: 'เป็นเพื่อนกันอยู่แล้ว' };
-      if (existing.status === 'pending') return { ok: false, error: 'มีคำขอเป็นเพื่อนค้างอยู่แล้ว' };
-      // rejected before — allow sending a fresh request, replacing the old record
-      db.friendRequests = db.friendRequests.filter(r => r.id !== existing.id);
-    }
-
-    const request = { id: genId(), fromId, toId, status: 'pending', createdAt: new Date().toISOString() };
-    db.friendRequests.push(request);
-    saveDB(db);
-    return { ok: true, request };
-  },
-
-  respond(requestId, accept) {
-    const db = getDB();
-    const idx = db.friendRequests.findIndex(r => r.id === requestId);
-    if (idx === -1) return null;
-    if (db.friendRequests[idx].status !== 'pending') return db.friendRequests[idx];
-    db.friendRequests[idx] = { ...db.friendRequests[idx], status: accept ? 'accepted' : 'rejected', respondedAt: new Date().toISOString() };
-    saveDB(db);
-    return db.friendRequests[idx];
-  }
-};
-
-// ===== GROUP INVITES =====
-const GroupInvites = {
-  getAll() { return getDB().groupInvites; },
-  getById(id) { return getDB().groupInvites.find(i => i.id === id); },
-  getIncomingPending(memberId) { return getDB().groupInvites.filter(i => i.toId === memberId && i.status === 'pending'); },
-  getPendingForGroupAndUser(groupId, userId) {
-    return getDB().groupInvites.find(i => i.groupId === groupId && i.toId === userId && i.status === 'pending');
-  },
-
-  send(groupId, groupName, fromId, fromName, toId) {
-    const group = Groups.getById(groupId);
-    if (!group) return { ok: false, error: 'ไม่พบกลุ่ม' };
-    if ((group.memberIds || []).includes(toId)) return { ok: false, error: 'ผู้ใช้นี้อยู่ในกลุ่มแล้ว' };
-    if (toId === fromId) return { ok: false, error: 'ไม่สามารถเชิญตัวเองได้' };
-
-    const db = getDB();
-    const existing = db.groupInvites.find(i => i.groupId === groupId && i.toId === toId && i.status === 'pending');
-    if (existing) return { ok: false, error: 'มีคำเชิญค้างอยู่แล้ว' };
-
-    const invite = { id: genId(), groupId, groupName, fromId, fromName, toId, status: 'pending', createdAt: new Date().toISOString() };
-    db.groupInvites.push(invite);
-    saveDB(db);
-    return { ok: true, invite };
-  },
-
-  respond(inviteId, accept) {
-    const db = getDB();
-    const idx = db.groupInvites.findIndex(i => i.id === inviteId);
-    if (idx === -1) return null;
-    if (db.groupInvites[idx].status !== 'pending') return db.groupInvites[idx];
-
-    db.groupInvites[idx] = { ...db.groupInvites[idx], status: accept ? 'accepted' : 'rejected', respondedAt: new Date().toISOString() };
-
-    if (accept) {
-      const gIdx = db.groups.findIndex(g => g.id === db.groupInvites[idx].groupId);
-      if (gIdx !== -1) {
-        const memberIds = db.groups[gIdx].memberIds || [];
-        if (!memberIds.includes(db.groupInvites[idx].toId)) {
-          db.groups[gIdx] = { ...db.groups[gIdx], memberIds: [...memberIds, db.groupInvites[idx].toId] };
-        }
-      }
-    }
-    saveDB(db);
-    return db.groupInvites[idx];
-  }
-};
-
-// ===== DEBT CALCULATOR =====
-function calculateDebts(groupId) {
-  const expenses = Expenses.getByGroup(groupId);
-  const group = Groups.getById(groupId);
-  if (!group) return [];
-
-  const balance = {};
-  (group.memberIds || []).forEach(mid => { balance[mid] = 0; });
-
-  expenses.forEach(exp => {
-    const perPerson = exp.amount / (exp.splitMemberIds || [exp.paidById]).length;
-    (exp.splitMemberIds || [exp.paidById]).forEach(mid => {
-      if (mid !== exp.paidById) {
-        balance[mid] = (balance[mid] || 0) - perPerson;
-        balance[exp.paidById] = (balance[exp.paidById] || 0) + perPerson;
-      }
+  // Category buttons
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById('expense-category').value = btn.dataset.cat;
     });
   });
 
-  // Apply confirmed settlements
-  Settlements.getByGroup(groupId).forEach(s => {
-    if (s.status === 'confirmed') {
-      balance[s.fromId] = (balance[s.fromId] || 0) + s.amount;
-      balance[s.toId]   = (balance[s.toId]   || 0) - s.amount;
-    }
+  // Receipt preview
+  document.getElementById('expense-receipt').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      document.getElementById('receipt-img').src = ev.target.result;
+      document.getElementById('receipt-preview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
   });
 
-  const debtors   = Object.entries(balance).filter(([,v]) => v < -0.01).map(([id,v]) => ({ id, amount: v }));
-  const creditors = Object.entries(balance).filter(([,v]) => v >  0.01).map(([id,v]) => ({ id, amount: v }));
-  const transactions = [];
+  // View all links
+  document.getElementById('view-all-groups-btn').addEventListener('click', () => {
+    document.querySelector('[data-section="groups"]').click();
+  });
+  document.getElementById('view-all-expenses-btn').addEventListener('click', () => {
+    document.querySelector('[data-section="expenses"]').click();
+  });
+  document.getElementById('create-group-btn')?.addEventListener('click', () => {
+    document.getElementById('create-group-modal').classList.add('active');
+  });
 
-  let i = 0, j = 0;
-  while (i < debtors.length && j < creditors.length) {
-    const d = debtors[i], c = creditors[j];
-    const amt = Math.min(-d.amount, c.amount);
-    const dMember = Members.getById(d.id);
-    const cMember = Members.getById(c.id);
-    transactions.push({
-      fromId: d.id, fromName: dMember?.name || d.id,
-      toId: c.id,   toName: cMember?.name   || c.id,
-      amount: Math.round(amt * 100) / 100
+  // Logout buttons
+  ['member-logout-btn', 'member-logout-btn-2'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.Auth.logout();
     });
-    d.amount += amt;
-    c.amount -= amt;
-    if (Math.abs(d.amount) < 0.01) i++;
-    if (Math.abs(c.amount) < 0.01) j++;
-  }
-  return transactions;
-}
+  });
 
-window.SP = { Members, Groups, Expenses, Settlements, Notifications, FriendRequests, GroupInvites, calculateDebts, genId };
+  // Settings & Profile links
+  document.getElementById('settings-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = './pages/settings.html';
+  });
+  document.getElementById('profile-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = './pages/settings.html#profile';
+  });
+
+  // Filter buttons
+  document.querySelectorAll('[data-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-cat]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Settlement tabs (rendering handled in js/member.js via initSettleTabs)
+</script>
+
+<script src="js/config.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/discord.js"></script>
+<script src="js/member.js"></script>
+</body>
+</html>
