@@ -41,6 +41,12 @@
       <!-- Theme Toggle -->
       <button class="btn-icon" id="theme-toggle" title="สลับโหมด">🌙</button>
 
+      <!-- Friends -->
+      <div class="notif-bell" id="friends-entry">
+        <button class="btn-icon" id="friends-toggle" title="เพื่อน">👫</button>
+        <span class="notif-badge" id="friends-entry-badge" style="display:none">0</span>
+      </div>
+
       <!-- Notification Bell -->
       <div class="notif-bell" id="notif-bell">
         <button class="btn-icon" id="notif-toggle">🔔</button>
@@ -477,6 +483,54 @@
         </button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ===== FRIENDS MODAL ===== -->
+<div class="modal-overlay" id="friends-modal">
+  <div class="modal" style="max-width:480px;width:95vw;max-height:85vh;overflow-y:auto;">
+    <div class="modal-header">
+      <h3 class="modal-title">เพื่อน 👫</h3>
+      <button class="modal-close" onclick="document.getElementById('friends-modal').classList.remove('active')">✕</button>
+    </div>
+    <div style="padding: 0 var(--space-5) var(--space-5);">
+      <div class="friends-tabs">
+        <button class="filter-btn active" data-friends-tab="friends">เพื่อนของฉัน</button>
+        <button class="filter-btn" data-friends-tab="requests">คำขอ <span class="badge badge-danger" id="friend-requests-count" style="display:none">0</span></button>
+        <button class="filter-btn" data-friends-tab="search">ค้นหา</button>
+      </div>
+
+      <!-- My Friends -->
+      <div class="friends-tab-panel active" id="friends-panel-friends">
+        <div id="friends-list"></div>
+      </div>
+
+      <!-- Incoming Requests -->
+      <div class="friends-tab-panel" id="friends-panel-requests">
+        <div id="friend-requests-list"></div>
+      </div>
+
+      <!-- Search -->
+      <div class="friends-tab-panel" id="friends-panel-search">
+        <div class="form-group">
+          <input type="search" id="friend-search-input" class="form-input" placeholder="ค้นหาด้วย Username, ชื่อเล่น หรือ User ID">
+        </div>
+        <div id="friend-search-results"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== INVITE TO GROUP MODAL ===== -->
+<div class="modal-overlay" id="invite-group-modal">
+  <div class="modal" style="max-width:440px;width:95vw;max-height:80vh;overflow-y:auto;">
+    <div class="modal-header">
+      <h3 class="modal-title">เชิญเพื่อนเข้ากลุ่ม 👫</h3>
+      <button class="modal-close" onclick="document.getElementById('invite-group-modal').classList.remove('active')">✕</button>
+    </div>
+    <div style="padding: var(--space-5);">
+      <div id="invite-group-list"></div>
+    </div>
   </div>
 </div>
 
