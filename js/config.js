@@ -10,10 +10,13 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyit4ktq
 // Example: "https://script.google.com/macros/s/AKfycb.../exec"
 
 const SHEET_NAMES = {
-  expenses:    "Expenses",
-  settlements: "Settlements",
-  members:     "Members",
-  groups:      "Groups"
+  expenses:       "Expenses",
+  settlements:    "Settlements",
+  members:        "Members",
+  groups:         "Groups",
+  friendRequests: "FriendRequests",
+  groupInvites:   "GroupInvites",
+  notifications:  "Notifications"
 };
 
 /**
