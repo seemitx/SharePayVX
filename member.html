@@ -192,17 +192,49 @@
         <h2 class="member-section-title">การชำระหนี้</h2>
       </div>
 
+      <!-- Summary -->
+      <div class="settle-summary">
+        <div class="balance-card owing">
+          <div class="balance-card-icon">📤</div>
+          <div class="balance-card-label">เราต้องจ่าย</div>
+          <div class="balance-card-amount" id="settle-total-owe">฿0</div>
+        </div>
+        <div class="balance-card owed">
+          <div class="balance-card-icon">📥</div>
+          <div class="balance-card-label">คนอื่นต้องจ่ายเรา</div>
+          <div class="balance-card-amount" id="settle-total-owed">฿0</div>
+        </div>
+        <div class="balance-card">
+          <div class="balance-card-icon">🧾</div>
+          <div class="balance-card-label">รายการค้างชำระ</div>
+          <div class="balance-card-amount" id="settle-pending-count">0</div>
+        </div>
+      </div>
+
       <!-- Tabs -->
       <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-5);">
         <button class="filter-btn active" data-settle-tab="pending">รอชำระ</button>
         <button class="filter-btn" data-settle-tab="history">ประวัติ</button>
       </div>
 
-      <div class="settlement-list" id="settlement-list">
-        <div class="empty-state">
-          <span class="empty-icon">🤝</span>
-          <p>ไม่มีหนี้ที่รอชำระ</p>
-          <p style="font-size: var(--text-xs); color: var(--text-tertiary);">เยี่ยม! คุณไม่มีหนี้ค้างชำระ</p>
+      <!-- Pending -->
+      <div class="settle-tab-panel active" id="settle-panel-pending">
+        <div class="settlement-list" id="settlement-list">
+          <div class="empty-state">
+            <span class="empty-icon">🤝</span>
+            <p>ไม่มีหนี้ที่รอชำระ</p>
+            <p style="font-size: var(--text-xs); color: var(--text-tertiary);">เยี่ยม! คุณไม่มีหนี้ค้างชำระ</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="settle-tab-panel" id="settle-panel-history">
+        <div class="settlement-list" id="settlement-history-list">
+          <div class="empty-state">
+            <span class="empty-icon">📜</span>
+            <p>ยังไม่มีประวัติการชำระเงิน</p>
+          </div>
         </div>
       </div>
     </section>
@@ -271,7 +303,7 @@
       <span class="bottom-nav-label">รายจ่าย</span>
     </button>
     <button class="bottom-nav-item" data-section="settle">
-      <span class="bottom-nav-icon">✅</span>
+      <span class="bottom-nav-icon">✅<span class="bottom-nav-badge" id="settle-nav-badge">0</span></span>
       <span class="bottom-nav-label">ชำระ</span>
     </button>
     <button class="bottom-nav-item" data-section="profile">
@@ -440,16 +472,8 @@
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-  // Bottom Nav
-  document.querySelectorAll('.bottom-nav-item').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.member-section').forEach(s => s.classList.remove('active'));
-      btn.classList.add('active');
-      const section = document.getElementById('section-' + btn.dataset.section);
-      if (section) { section.classList.add('active'); window.scrollTo(0, 0); }
-    });
-  });
+  // Bottom Nav clicks are handled by initNavigation() in js/member.js
+  // (it drives both the active-state toggling and section rendering).
 
   // FAB → Add Expense
   document.getElementById('fab-add-expense').addEventListener('click', () => {
@@ -534,13 +558,7 @@
     });
   });
 
-  // Settlement tabs
-  document.querySelectorAll('[data-settle-tab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-settle-tab]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    });
-  });
+  // Settlement tabs (rendering handled in js/member.js via initSettleTabs)
 </script>
 
 <script src="js/config.js"></script>
