@@ -33,6 +33,19 @@ function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+// 5-char, human-friendly (no ambiguous 0/O/1/I) unique friend code
+function generateFriendCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let attempt = 0; attempt < 20; attempt++) {
+    code = '';
+    for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    const taken = getDB().members.some(m => m.friendCode === code);
+    if (!taken) break;
+  }
+  return code;
+}
+
 // ===== MEMBERS =====
 const Members = {
   getAll() { return getDB().members; },
@@ -79,6 +92,36 @@ const Members = {
         (m.email || '').toLowerCase().includes(q)
       );
     }).slice(0, 20);
+  },
+
+  getByFriendCode(code) {
+    const c = String(code || '').trim().toUpperCase();
+    if (!c) return null;
+    return getDB().members.find(m => (m.friendCode || '').toUpperCase() === c) || null;
+  },
+
+  // Lazily assigns a friend code to accounts created before this feature existed
+  ensureFriendCode(id) {
+    const db = getDB();
+    const idx = db.members.findIndex(m => m.id === id);
+    if (idx === -1) return null;
+    if (db.members[idx].friendCode) return db.members[idx].friendCode;
+    const code = generateFriendCode();
+    db.members[idx] = { ...db.members[idx], friendCode: code };
+    saveDB(db);
+    SheetsAPI.updateRow(SHEET_NAMES.members, id, db.members[idx]).catch(() => {});
+    return code;
+  },
+
+  regenerateFriendCode(id) {
+    const db = getDB();
+    const idx = db.members.findIndex(m => m.id === id);
+    if (idx === -1) return null;
+    const code = generateFriendCode();
+    db.members[idx] = { ...db.members[idx], friendCode: code };
+    saveDB(db);
+    SheetsAPI.updateRow(SHEET_NAMES.members, id, db.members[idx]).catch(() => {});
+    return code;
   }
 };
 
