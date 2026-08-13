@@ -1051,3 +1051,57 @@ body.has-sidebar {
     padding: var(--space-4);
   }
 }
+
+/* =========================================================
+   Friends & Group-Invite feature
+   ========================================================= */
+.friends-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+}
+
+.friends-tab-panel { display: none; }
+.friends-tab-panel.active { display: block; }
+
+.friend-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-2);
+}
+
+.friend-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.friend-name {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.friend-sub {
+  font-size: var(--text-xs);
+}
+
+.request-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.notif-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
