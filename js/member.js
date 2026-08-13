@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSettleTabs();
     bindLogout();
     bindNotifications();
+    initFriendsFeature();
     updateSettleBadge();
   } finally {
     // Hide the full-screen page loader once the dashboard is ready
@@ -297,7 +298,8 @@ window.openGroupDetail = function(id) {
 
   document.getElementById('gd-body').innerHTML = `
     <div class="section-block">
-      <h4>สมาชิก (${members.length} คน)</h4>
+      <div class="flex-between mb-2"><h4>สมาชิก (${members.length} คน)</h4>
+      <button class="btn btn-sm btn-primary" onclick="openInviteToGroupModal('${id}')">👫 เชิญเพื่อนเข้ากลุ่ม</button></div>
       <div class="member-chips">${members.map(m => `<span class="chip">${m.name}</span>`).join('')}</div>
     </div>
     <div class="section-block">
@@ -552,6 +554,12 @@ window.paySettlementDebt = function(groupId, fromId, fromName, toId, toName, amo
 };
 
 // ===== NOTIFICATIONS =====
+const NOTIF_ICONS = {
+  payment_received: '✅', payment_sent: '✅', new_expense: '💸',
+  friend_request: '🤝', friend_accepted: '🎉',
+  group_invite: '👫', group_invite_accepted: '🎉'
+};
+
 function renderNotifDropdown() {
   const container = document.getElementById('notif-items');
   if (!container) return;
@@ -562,14 +570,39 @@ function renderNotifDropdown() {
     return;
   }
 
-  container.innerHTML = notifs.map(n => `
+  container.innerHTML = notifs.map(n => {
+    let actionsHtml = '';
+
+    if (n.type === 'friend_request' && n.data?.requestId) {
+      const req = window.SP.FriendRequests.getById(n.data.requestId);
+      if (req && req.status === 'pending') {
+        actionsHtml = `
+          <div class="notif-actions">
+            <button class="btn btn-primary btn-sm" onclick="respondFriendRequest('${req.id}', true)">รับ</button>
+            <button class="btn btn-ghost btn-sm" onclick="respondFriendRequest('${req.id}', false)">ปฏิเสธ</button>
+          </div>`;
+      }
+    } else if (n.type === 'group_invite' && n.data?.inviteId) {
+      const inv = window.SP.GroupInvites.getById(n.data.inviteId);
+      if (inv && inv.status === 'pending') {
+        actionsHtml = `
+          <div class="notif-actions">
+            <button class="btn btn-primary btn-sm" onclick="respondGroupInvite('${inv.id}', true)">เข้าร่วม</button>
+            <button class="btn btn-ghost btn-sm" onclick="respondGroupInvite('${inv.id}', false)">ปฏิเสธ</button>
+          </div>`;
+      }
+    }
+
+    return `
     <div class="notif-item ${n.isRead ? '' : 'unread'}">
-      <div class="notif-icon">${n.type === 'payment_received' ? '✅' : n.type === 'new_expense' ? '💸' : '🔔'}</div>
+      <div class="notif-icon">${NOTIF_ICONS[n.type] || '🔔'}</div>
       <div class="notif-body">
         <div>${escHtml(n.message)}</div>
         <div class="text-muted">${SharePay.timeAgo(n.createdAt)}</div>
+        ${actionsHtml}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function bindNotifications() {
@@ -853,3 +886,261 @@ function bindLogout() {
 function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+function avatarUrl(name) {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'U')}&background=3B82F6&color=fff`;
+}
+
+function debounce(fn, wait) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+
+// ===== FRIENDS FEATURE =====
+function initFriendsFeature() {
+  document.getElementById('friends-toggle')?.addEventListener('click', openFriendsModal);
+
+  document.querySelectorAll('#friends-modal [data-friends-tab]').forEach(btn => {
+    btn.addEventListener('click', () => switchFriendsTab(btn.dataset.friendsTab));
+  });
+
+  document.getElementById('friend-search-input')?.addEventListener('input', debounce(renderFriendSearchResults, 250));
+
+  updateFriendsEntryBadge();
+}
+
+function openFriendsModal() {
+  switchFriendsTab('friends');
+  document.getElementById('friends-modal')?.classList.add('active');
+}
+
+function switchFriendsTab(tab) {
+  document.querySelectorAll('#friends-modal [data-friends-tab]').forEach(b => b.classList.toggle('active', b.dataset.friendsTab === tab));
+  document.querySelectorAll('#friends-modal .friends-tab-panel').forEach(p => p.classList.toggle('active', p.id === `friends-panel-${tab}`));
+  if (tab === 'friends') renderFriendsList();
+  if (tab === 'requests') renderFriendRequestsList();
+  if (tab === 'search') renderFriendSearchResults();
+}
+
+function renderFriendsList() {
+  const container = document.getElementById('friends-list');
+  if (!container) return;
+  const friends = window.SP.FriendRequests.getFriends(currentUser.id);
+
+  if (friends.length === 0) {
+    container.innerHTML = SharePay.emptyState('👫', 'ยังไม่มีเพื่อน', 'ค้นหาและเพิ่มเพื่อนได้ที่แท็บ "ค้นหา"');
+    return;
+  }
+
+  container.innerHTML = friends.map(f => `
+    <div class="friend-row">
+      <img class="friend-avatar" src="${f.avatar || avatarUrl(f.name)}" alt="${escHtml(f.name)}">
+      <div class="friend-info flex-1">
+        <div class="friend-name">${escHtml(f.name)}</div>
+        <div class="friend-sub text-muted">${escHtml(f.email || '')}</div>
+      </div>
+      <span class="badge badge-success">เป็นเพื่อนแล้ว</span>
+    </div>`).join('');
+}
+
+function renderFriendRequestsList() {
+  const container = document.getElementById('friend-requests-list');
+  if (!container) return;
+  const reqs = window.SP.FriendRequests.getIncomingPending(currentUser.id);
+
+  if (reqs.length === 0) {
+    container.innerHTML = SharePay.emptyState('📭', 'ไม่มีคำขอเป็นเพื่อน');
+    return;
+  }
+
+  container.innerHTML = reqs.map(r => {
+    const fromMember = window.SP.Members.getById(r.fromId);
+    return `
+      <div class="friend-row">
+        <img class="friend-avatar" src="${fromMember?.avatar || avatarUrl(fromMember?.name)}" alt="">
+        <div class="friend-info flex-1">
+          <div class="friend-name">${escHtml(fromMember?.name || 'ผู้ใช้')}</div>
+          <div class="friend-sub text-muted">ส่งคำขอเป็นเพื่อน · ${SharePay.timeAgo(r.createdAt)}</div>
+        </div>
+        <div class="request-actions">
+          <button class="btn btn-primary btn-sm" onclick="respondFriendRequest('${r.id}', true)">รับ</button>
+          <button class="btn btn-ghost btn-sm" onclick="respondFriendRequest('${r.id}', false)">ปฏิเสธ</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderFriendSearchResults() {
+  const input = document.getElementById('friend-search-input');
+  const container = document.getElementById('friend-search-results');
+  if (!container) return;
+  const q = (input?.value || '').trim();
+
+  if (!q) {
+    container.innerHTML = '<p class="text-muted" style="padding: var(--space-4) 0;">พิมพ์ Username, ชื่อเล่น หรือ User ID เพื่อค้นหา</p>';
+    return;
+  }
+
+  const results = window.SP.Members.search(q, currentUser.id);
+  if (results.length === 0) {
+    container.innerHTML = SharePay.emptyState('🔍', 'ไม่พบผู้ใช้ที่ค้นหา');
+    return;
+  }
+
+  container.innerHTML = results.map(m => {
+    const status = window.SP.FriendRequests.statusBetween(currentUser.id, m.id);
+    let actionHtml;
+    if (status === 'friends') actionHtml = '<span class="badge badge-success">เป็นเพื่อนแล้ว</span>';
+    else if (status === 'pending_sent') actionHtml = '<span class="badge badge-warning">รอการตอบรับ</span>';
+    else if (status === 'pending_received') actionHtml = `<button class="btn btn-primary btn-sm" onclick="respondFriendRequestBetween('${m.id}')">ตอบรับคำขอ</button>`;
+    else actionHtml = `<button class="btn btn-primary btn-sm" onclick="sendFriendRequest('${m.id}')">+ เพิ่มเพื่อน</button>`;
+
+    return `
+      <div class="friend-row">
+        <img class="friend-avatar" src="${m.avatar || avatarUrl(m.name)}" alt="">
+        <div class="friend-info flex-1">
+          <div class="friend-name">${escHtml(m.name)}</div>
+          <div class="friend-sub text-muted">${escHtml(m.email || '')} · ID: ${m.id}</div>
+        </div>
+        ${actionHtml}
+      </div>`;
+  }).join('');
+}
+
+window.sendFriendRequest = function(toId) {
+  const res = window.SP.FriendRequests.send(currentUser.id, toId);
+  if (!res.ok) { SharePay.showToast(res.error, 'error'); return; }
+
+  const toMember = window.SP.Members.getById(toId);
+  window.SP.Notifications.create({
+    memberId: toId, type: 'friend_request',
+    message: `${currentUser.name} ส่งคำขอเป็นเพื่อนถึงคุณ`,
+    data: { requestId: res.request.id }
+  });
+
+  SharePay.showToast(`ส่งคำขอเป็นเพื่อนถึง ${toMember?.name || ''} แล้ว`, 'success');
+  renderFriendSearchResults();
+};
+
+window.respondFriendRequestBetween = function(otherId) {
+  const req = window.SP.FriendRequests.getBetween(currentUser.id, otherId);
+  if (!req) return;
+  window.respondFriendRequest(req.id, true);
+};
+
+window.respondFriendRequest = function(requestId, accept) {
+  const req = window.SP.FriendRequests.getById(requestId);
+  if (!req || req.status !== 'pending') {
+    SharePay.showToast('คำขอนี้ถูกดำเนินการไปแล้ว', 'error');
+    refreshFriendsAndNotifUI();
+    return;
+  }
+
+  window.SP.FriendRequests.respond(requestId, accept);
+  const fromMember = window.SP.Members.getById(req.fromId);
+
+  if (accept) {
+    window.SP.Notifications.create({ memberId: req.fromId, type: 'friend_accepted', message: `${currentUser.name} ตอบรับคำขอเป็นเพื่อนของคุณแล้ว 🎉` });
+    SharePay.showToast(`คุณกับ ${fromMember?.name || ''} เป็นเพื่อนกันแล้ว 🎉`, 'success');
+  } else {
+    SharePay.showToast('ปฏิเสธคำขอเป็นเพื่อนแล้ว', 'info');
+  }
+
+  refreshFriendsAndNotifUI();
+};
+
+function updateFriendsEntryBadge() {
+  const badge = document.getElementById('friends-entry-badge');
+  const tabBadge = document.getElementById('friend-requests-count');
+  const count = window.SP.FriendRequests.getIncomingPending(currentUser.id).length;
+
+  if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
+  if (tabBadge) { tabBadge.textContent = count; tabBadge.style.display = count > 0 ? 'inline-flex' : 'none'; }
+}
+
+function refreshFriendsAndNotifUI() {
+  SharePay.updateNotifBell(currentUser.id);
+  renderNotifDropdown();
+  updateFriendsEntryBadge();
+
+  const activeTab = document.querySelector('#friends-modal [data-friends-tab].active')?.dataset.friendsTab;
+  if (activeTab) switchFriendsTab(activeTab);
+}
+
+// ===== GROUP INVITES =====
+window.openInviteToGroupModal = function(groupId) {
+  const modal = document.getElementById('invite-group-modal');
+  if (!modal) return;
+  modal.dataset.groupId = groupId;
+  renderInviteToGroupList(groupId);
+  modal.classList.add('active');
+};
+
+function renderInviteToGroupList(groupId) {
+  const container = document.getElementById('invite-group-list');
+  if (!container) return;
+  const group = window.SP.Groups.getById(groupId);
+  if (!group) return;
+
+  const friends = window.SP.FriendRequests.getFriends(currentUser.id);
+  if (friends.length === 0) {
+    container.innerHTML = SharePay.emptyState('👫', 'ยังไม่มีเพื่อน', 'เพิ่มเพื่อนก่อนเพื่อชวนเข้ากลุ่ม');
+    return;
+  }
+
+  container.innerHTML = friends.map(f => {
+    const isMember = (group.memberIds || []).includes(f.id);
+    const pendingInvite = window.SP.GroupInvites.getPendingForGroupAndUser(groupId, f.id);
+
+    let actionHtml;
+    if (isMember) actionHtml = '<span class="badge badge-success">อยู่ในกลุ่มแล้ว</span>';
+    else if (pendingInvite) actionHtml = '<span class="badge badge-warning">รอการตอบรับ</span>';
+    else actionHtml = `<button class="btn btn-primary btn-sm" onclick="sendGroupInvite('${groupId}','${f.id}')">เชิญ</button>`;
+
+    return `
+      <div class="friend-row">
+        <img class="friend-avatar" src="${f.avatar || avatarUrl(f.name)}" alt="">
+        <div class="friend-info flex-1">
+          <div class="friend-name">${escHtml(f.name)}</div>
+        </div>
+        ${actionHtml}
+      </div>`;
+  }).join('');
+}
+
+window.sendGroupInvite = function(groupId, toId) {
+  const group = window.SP.Groups.getById(groupId);
+  const res = window.SP.GroupInvites.send(groupId, group?.name || '', currentUser.id, currentUser.name, toId);
+  if (!res.ok) { SharePay.showToast(res.error, 'error'); return; }
+
+  window.SP.Notifications.create({
+    memberId: toId, type: 'group_invite',
+    message: `${currentUser.name} ชวนคุณเข้ากลุ่ม "${group?.name || ''}"`,
+    data: { inviteId: res.invite.id }
+  });
+
+  SharePay.showToast('ส่งคำเชิญเข้ากลุ่มเรียบร้อย', 'success');
+  renderInviteToGroupList(groupId);
+};
+
+window.respondGroupInvite = function(inviteId, accept) {
+  const invite = window.SP.GroupInvites.getById(inviteId);
+  if (!invite || invite.status !== 'pending') {
+    SharePay.showToast('คำเชิญนี้ถูกดำเนินการไปแล้ว', 'error');
+    refreshFriendsAndNotifUI();
+    return;
+  }
+
+  window.SP.GroupInvites.respond(inviteId, accept);
+
+  if (accept) {
+    window.SP.Notifications.create({ memberId: invite.fromId, type: 'group_invite_accepted', message: `${currentUser.name} เข้าร่วมกลุ่ม "${invite.groupName}" แล้ว 🎉` });
+    SharePay.showToast(`เข้าร่วมกลุ่ม "${invite.groupName}" แล้ว 🎉`, 'success');
+    initDashboard();
+    renderGroupsSection();
+  } else {
+    SharePay.showToast('ปฏิเสธคำเชิญเข้ากลุ่มแล้ว', 'info');
+  }
+
+  refreshFriendsAndNotifUI();
+};
